@@ -1,57 +1,127 @@
-# SyncNote Studio - 智慧影音同步學習與商業筆記工作台
+# SyncNote - 智慧影音同步學習與筆記工作台
 
-本專案是一個現代化、可商業化的影音多維同步學習平台，具備影像、同步簡報、即時逐字稿、波形播放器以及 LM Studio 本機 AI 重點整理五大核心模組。
+<div align="center">
+
+![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?logo=vite&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?logo=tailwind-css&logoColor=white)
+![LM Studio](https://img.shields.io/badge/LM%20Studio-Local%20AI-blueviolet)
+![License](https://img.shields.io/badge/License-MIT-green)
+
+**打破視訊、簡報、逐字稿與 AI 筆記邊界的新一代沉浸式學習工作台**  
+純前端本地運行・零資料上雲・原生中文斷詞優化・毫秒級多維時間同步
+
+[✨ 核心特色](#-核心特色) • [📸 介面預覽](#-介面預覽) • [🚀 快速啟動](#-快速啟動) • [🤖 本地-ai-設定指南](#-本地-ai-設定指南) • [📖 開發歷程紀錄](#-開發歷程與技術細節)
+
+</div>
 
 ---
 
-## 🌟 核心特色與商業化功能
+## 📸 介面預覽
 
-### 1. 📁 本地資料夾即時讀取與存檔 (File System Access API)
-- **讀取特定資料夾**：一鍵開啟電腦上的專案資料夾，自動載入並識別影音檔（MP4/WebM/MP3/WAV）、字幕檔（SRT/VTT）、簡報（圖片/PDF）與設定檔（`sync_config.json`）。
-- **即時寫入存檔**：編輯調整時間戳或逐字稿後，點擊「存檔至資料夾」直接寫回該目錄內的 `sync_config.json`，無需反覆下載。
-- **相容性支援**：在未選擇資料夾或特定瀏覽器時，支援常規檔案個別上傳與匯出下載 `sync_config.json`。
+### 🖥️ 沉浸式四分格工作台 (主畫面總覽)
+平時自動隱藏操作功能鍵與標籤，呈現最純粹的影音與筆記畫面；滑鼠懸停即平滑浮現控制列。
+![SyncNote 主畫面總覽](./docs/images/main_overview.png)
 
-### 2. ⏱️ 多維時間同步與即時微調
-- **四維時間同步**：播放影音時，波形軸、即時字幕高亮、語音頻譜 HUD、簡報自動翻頁保持毫秒級同步。
-- **簡報翻頁時間軸管理**：支援隨時手動翻頁、點擊「設為當前秒數為本頁起始點」、或是開啟「簡報時間軸管理彈窗」全面檢視與編輯每一頁簡報的出現時間。
-- **逐字稿微調校對**：內建「微調校對」模式，可直接在行內編輯文字、說話者名稱、以 `+0.5s` / `-0.5s` 微調時間戳、設為當前播放時間，並支援一鍵導出標準 `.srt` 字幕。
+### 🤖 本地 AI 重點整理 (情境切換 & 互動時間戳)
+支援多種情境提示詞範本（商業會議、學術課程、技術架構、自訂提示詞），AI 筆記內所有時間戳 `[MM:SS]` 均可點擊直接跳轉播放。
+![AI 重點整理面板](./docs/images/ai_summary_panel.png)
 
-### 3. 🤖 LM Studio 本地大型語言模型無縫對接
-- **保護商業隱私**：串接本地 LM Studio Local Server（預設端點 `http://localhost:1234/v1`），完全離線運作，資料不外洩。
-- **智慧時間戳生成**：AI 依據逐字稿自動提煉【核心主題與目標】、【關鍵時間戳綱要 [MM:SS]】、【決策事項與行動清單 (Action Items)】與【技術洞察】。
-- **互動式時間戳記**：AI 筆記中的所有時間標記 `[MM:SS]` 皆自動轉為互動膠囊按鈕，點擊立即定位影音跳轉播放。
-- **Markdown 富文本編輯**：支援 Markdown 預覽/編輯切換、一鍵插入當前影音時間戳記、複製與下載 `.md` 檔案。
+### ⏱️ 自訂時間區間整理 (雙向聯動高亮波形軸)
+支援「全片」與「自訂區間」雙模式，一鍵將當前秒數設為起訖點，時間軸同步呈現紫色高亮範圍。
+![自訂區間選取與分析](./docs/images/range_selection.png)
 
-### 4. 📐 自由調整大小與位置的彈性格狀工作台 (Resizable Workspace)
-- **無段自由縮放 (Split Resizers)**：
-  - 水平分割條：自由拖曳調整上下兩排高度比。
-  - 垂直分割條：自由拖曳調整左右兩格寬度比。
-- **模組位置互換 (Swap Panels)**：支援頂部兩格互換、底部兩格互換、或左右上下互換。
-- **單一模組最大化 (Maximize)**：任何面板皆可一鍵全螢幕放大檢視，再次點擊還原。
+### 📝 即時逐字稿搜尋與行內校對
+內建語意搜尋、自動平滑滾動（去抖動設計），支援以 `+0.5s` / `-0.5s` 微調字幕時間與即時匯出標準 `.srt`。
+![逐字稿面板與校對模式](./docs/images/transcript_panel.png)
+
+### 📊 PDF 簡報解析與翻頁時間軸管理
+支援直接上傳 PDF 講義轉為高解析投影片，具備「首頁在最前、末頁在最後、其餘平均展開」的時間軸排程演算法。
+![PDF 簡報時間軸管理彈窗](./docs/images/slide_timeline_modal.png)
+
+### ⚙️ 本地 LLM API 連線與自動模型偵測
+直接串接本地 LM Studio 或任何 OpenAI 相容端點，保護商業隱私，免金鑰、免雲端成本。
+![API 連線與模型設定彈窗](./docs/images/api_settings_modal.png)
+
+---
+
+## ✨ 核心特色
+
+### 1. 📁 本機資料夾直接存取 (File System Access API)
+- **零上傳雲端**：直接在電腦上選取工作專案資料夾，自動載入並識別影音檔（MP4/WebM/MP3/WAV）、字幕檔（SRT/VTT）、簡報講義（PDF/PNG/JPG）與專案檔（`sync_config.json`）。
+- **一鍵存檔回寫**：編輯逐字稿或時間戳後，點擊「存檔至資料夾」直接寫回目錄，免去反覆下載檔案。
+- **跨平台相容降級**：非 Chromium 核心環境提供標準檔案選擇與匯出備用方案。
+
+### 2. ⚡ 原生繁體中文斷詞 (Intl.Segmenter) 與 Context Window 智慧精煉
+- **0 KB 斷詞引擎**：採用瀏覽器原生 `Intl.Segmenter('zh-TW', { granularity: 'word' })`，不需打包任何龐大第三方詞庫。
+- **Token 壓縮省電達 45%**：自動清除口癖虛詞（如「那個」、「然後」、「就是說」等）與短碎句合併。
+- **時間戳記 ID 化壓縮機制**：以 `#1`、`#2` 取代冗長秒數字串，大幅突破本地 7B/9B 小型模型有限的上下文視窗。
+
+### 3. 🎯 四維時間毫秒級精準同步
+- **播放器、簡報、逐字稿與音波活動檢測 (VAD) 四向連動**。
+- 點選逐字稿任意一行、簡報頁碼或 AI 筆記的時間膠囊按鈕，影音毫秒級同步跳轉。
+- 60fps 平滑音頻頻譜 HUD，無影片時自動切換為高質感語音波形動畫。
+
+### 4. 🔒 嚴格企業級資安與高效能渲染架構
+- **DOMPurify 白名單消毒**：徹底阻絕 Markdown 渲染中的 XSS 攻擊。
+- **記憶體洩漏根治**：嚴格控管 `URL.revokeObjectURL`，釋放長影片與多頁 PDF 的暫存空間。
+- **GPU Framebuffer 最佳化**：解耦 Canvas 尺寸與播放繪圖，徹底消除 GPU 顯存重置抖動。
+- **80ms 串流節流緩衝**：確保 AI 即時輸出時 UI 主執行緒保持 60fps 順暢。
 
 ---
 
 ## 🚀 快速啟動
 
+### 系統需求
+- Node.js 18.0 或以上版本
+- 現代主流瀏覽器（推薦 Chrome、Edge、Brave 等支援 File System Access API 之瀏覽器）
+
+### 安裝與執行
+
 ```bash
-# 安裝相依套件
+# 1. 複製專案
+git clone https://github.com/etsaycood/SRTNote.git
+cd SRTNote
+
+# 2. 安裝相依套件
 npm install
 
-# 啟動本地開發伺服器
+# 3. 啟動本機開發伺服器
 npm run dev
 
-# 建構生產環境版本
+# 4. 建置生產環境版本
 npm run build
 ```
 
-啟動後瀏覽器訪問 `http://localhost:3000/` 即可立即使用。
+啟動後請使用瀏覽器開啟 `http://localhost:3000/`。
 
 ---
 
-## 🛠️ LM Studio 本地 AI 設定指南
+## 🤖 本地 AI 設定指南 (LM Studio)
 
-1. 開啟 **LM Studio** 軟體，載入任意模型（如 `qwen2.5-7b-instruct` 或 `gemma-2-9b`）。
-2. 在 LM Studio 左側選單切換至 **Local Server** 頁籤，點選 **Start Server**（預設為連接埠 `1234`）。
-3. 在本網頁右上角點擊 **LM Studio AI** 按鈕：
-   - 點擊「**測試連線 & 偵測模型**」，系統將自動偵測本機模型。
-   - 點擊「**儲存連線設定**」後，即可在右下角面板一鍵點擊「**產生重點整理**」，體驗即時串流生成的快感！
+本系統支援任何相容 OpenAI `/v1/chat/completions` 規範的本地伺服器：
+
+1. 下載並開啟 [LM Studio](https://lmstudio.ai/)。
+2. 下載推薦開源模型（例如 `Qwen2.5-7B-Instruct`、`Gemma-2-9B-It` 或 `Llama-3.1-8B-Instruct`）。
+3. 切換至 LM Studio 左側選單的 **Developer / Local Server**，點選 **Start Server**：
+   - 預設端點為 `http://127.0.0.1:1234/v1`
+   - 請確認開啟 **Enable CORS**（允許跨域存取）。
+4. 回到 SyncNote 網頁，點選右上角 **API 連線**：
+   - 點擊「**測試連線 & 偵測模型**」，系統將自動抓取當前已載入之模型。
+   - 選擇所需分析情境（商業會議、線上課程、技術架構或自訂）。
+5. 點擊「**產生重點整理**」，享受零延遲、高隱私的即時串流筆記體驗！
+
+---
+
+## 📖 開發歷程與技術細節
+
+本專案歷經架構重構、原生中文斷詞整合、Context Window 壓縮與全面資安代碼審查，詳細設計決策與演進歷程請參閱：
+- 📄 [完整開發歷程紀錄 (DEVELOPMENT_LOG.md)](./DEVELOPMENT_LOG.md)
+- 🛡️ [資安審查與修復報告 (CODE_REVIEW_AND_PATCH_REPORT.md)](./CODE_REVIEW_AND_PATCH_REPORT.md)
+
+---
+
+## 📄 開源授權
+
+本專案基於 [MIT License](LICENSE) 條款開源發布。
