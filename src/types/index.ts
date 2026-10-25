@@ -41,10 +41,14 @@ export interface PanelConfig {
   isMaximized: boolean;
 }
 
+export type MediaType = 'video' | 'audio' | 'youtube';
+
 export interface ProjectConfig {
   version: string;
   title: string;
-  mediaType: 'video' | 'audio';
+  mediaType: MediaType;
+  youtubeUrl?: string;
+  youtubeId?: string;
   mediaFileName?: string;
   mediaDuration: number;
   subtitles: SubtitleItem[];

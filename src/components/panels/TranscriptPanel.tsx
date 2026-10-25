@@ -17,7 +17,8 @@ import {
   ArrowDownToLine,
   Crosshair,
   User,
-  GripVertical
+  GripVertical,
+  Clipboard
 } from 'lucide-react';
 
 interface TranscriptPanelProps {
@@ -29,6 +30,7 @@ interface TranscriptPanelProps {
   onToggleMaximize: () => void;
   onClose?: () => void;
   onUploadSubtitles: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onOpenPasteModal?: () => void;
 }
 
 export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
@@ -39,7 +41,8 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
   isMaximized,
   onToggleMaximize,
   onClose,
-  onUploadSubtitles
+  onUploadSubtitles,
+  onOpenPasteModal
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
@@ -219,6 +222,16 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
               <Upload className="w-3.5 h-3.5" />
               <input type="file" accept=".srt,.vtt,.json" onChange={onUploadSubtitles} className="hidden" />
             </label>
+
+            {onOpenPasteModal && (
+              <button
+                onClick={onOpenPasteModal}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-slate-800 transition-colors"
+                title="貼上逐字稿文字 (支援 YouTube 逐字稿、時間標記文字或 SRT)"
+              >
+                <Clipboard className="w-3.5 h-3.5" />
+              </button>
+            )}
 
             <button
               onClick={onToggleMaximize}

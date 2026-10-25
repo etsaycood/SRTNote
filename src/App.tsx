@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { PanelId, LayoutPreset, SubtitleItem, SlideItem, ProjectConfig, LMStudioConfig, TimeRange } from './types';
+import { PanelId, LayoutPreset, SubtitleItem, SlideItem, ProjectConfig, LMStudioConfig, TimeRange, MediaType } from './types';
 import { SAMPLE_PROJECT } from './mock/sampleProject';
 import { DEFAULT_LM_STUDIO_CONFIG } from './utils/lmStudioClient';
 import { parseSubtitleContent } from './utils/srtParser';
@@ -20,12 +20,14 @@ import { TranscriptPanel } from './components/panels/TranscriptPanel';
 import { AISummaryPanel } from './components/panels/AISummaryPanel';
 import { LMStudioModal } from './components/LMStudioModal';
 import { SlideTimelineModal } from './components/SlideTimelineModal';
+import { YouTubeModal } from './components/YouTubeModal';
+import { PasteTranscriptModal } from './components/PasteTranscriptModal';
 
 export default function App() {
   // --- Project State ---
   const [projectTitle, setProjectTitle] = useState(SAMPLE_PROJECT.title);
   const [mediaUrl, setMediaUrl] = useState<string | undefined>(undefined);
-  const [mediaType, setMediaType] = useState<'video' | 'audio'>('audio');
+  const [mediaType, setMediaType] = useState<MediaType>('audio');
   const [subtitles, setSubtitles] = useState<SubtitleItem[]>(SAMPLE_PROJECT.subtitles);
   const [slides, setSlides] = useState<SlideItem[]>(SAMPLE_PROJECT.slides);
   const [aiSummary, setAiSummary] = useState<string>(SAMPLE_PROJECT.aiSummary);
@@ -74,6 +76,8 @@ export default function App() {
   // --- Modals State ---
   const [isLMModalOpen, setIsLMModalOpen] = useState(false);
   const [isSlideModalOpen, setIsSlideModalOpen] = useState(false);
+  const [isYouTubeModalOpen, setIsYouTubeModalOpen] = useState(false);
+  const [isPasteTranscriptModalOpen, setIsPasteTranscriptModalOpen] = useState(false);
 
   // --- LM Studio Config State ---
   const [lmConfig, setLmConfig] = useState<LMStudioConfig>(() => {
@@ -340,6 +344,7 @@ export default function App() {
       version: '1.0.0',
       title: projectTitle,
       mediaType,
+      youtubeUrl: mediaType === 'youtube' ? mediaUrl : undefined,
       mediaDuration: duration,
       subtitles,
       slides,
@@ -373,6 +378,31 @@ export default function App() {
       setMediaUrl(url);
       setMediaType(isVid ? 'video' : 'audio');
       setCurrentTime(0);
+    }
+  };
+
+  // --- YouTube Loader Handler ---
+  const handleLoadYouTube = (url: string, videoId: string) => {
+    revokeMediaUrl(mediaUrl);
+    setMediaUrl(url);
+    setMediaType('youtube');
+    setIsPlaying(false);
+    setCurrentTime(0);
+    if (projectTitle === SAMPLE_PROJECT.title) {
+      setProjectTitle(`YouTube: ${videoId}`);
+    }
+  };
+
+  // --- Pasted Transcript Handler ---
+  const handleImportPastedSubtitles = (newSubs: SubtitleItem[], append: boolean) => {
+    if (append) {
+      setSubtitles((prev) => [...prev, ...newSubs]);
+    } else {
+      setSubtitles(newSubs);
+    }
+    const maxSubTime = Math.max(...newSubs.map((s) => s.endTime || s.startTime || 0));
+    if (maxSubTime > 0) {
+      setDuration((prev) => Math.max(prev, Math.ceil(maxSubTime + 3)));
     }
   };
 
@@ -465,6 +495,10 @@ export default function App() {
           const parsed: ProjectConfig = JSON.parse(event.target?.result as string);
           if (parsed.title) setProjectTitle(parsed.title);
           if (parsed.subtitles) setSubtitles(parsed.subtitles);
+          if (parsed.mediaType) setMediaType(parsed.mediaType);
+          if (parsed.mediaType === 'youtube' && parsed.youtubeUrl) {
+            setMediaUrl(parsed.youtubeUrl);
+          }
           if (parsed.slides) {
             revokeSlideUrls(slides);
             setSlides(parsed.slides);
@@ -583,6 +617,7 @@ export default function App() {
             currentSpeaker={activeSubtitle?.speaker}
             currentSubtitleText={activeSubtitle?.text}
             onUploadMedia={handleUploadMedia}
+            onOpenYouTubeModal={() => setIsYouTubeModalOpen(true)}
           />
         );
 
@@ -618,6 +653,7 @@ export default function App() {
             onToggleMaximize={() => toggleMaximizePanel('transcript')}
             onClose={() => handleClosePanel('transcript')}
             onUploadSubtitles={handleUploadSubtitles}
+            onOpenPasteModal={() => setIsPasteTranscriptModalOpen(true)}
           />
         );
 
@@ -670,6 +706,8 @@ export default function App() {
         onUploadSubtitles={handleUploadSubtitles}
         onUploadSlides={handleUploadSlides}
         onImportConfig={handleImportConfig}
+        onOpenYouTubeModal={() => setIsYouTubeModalOpen(true)}
+        onOpenPasteModal={() => setIsPasteTranscriptModalOpen(true)}
       />
 
       {/* 2. Main Resizable Workspace (Supports 0, 1, 2, 3, 4 panels) */}
@@ -723,6 +761,21 @@ export default function App() {
         duration={duration}
         onUpdateSlides={setSlides}
         onSeek={handleSeek}
+      />
+
+      {/* 6. YouTube Modal */}
+      <YouTubeModal
+        isOpen={isYouTubeModalOpen}
+        onClose={() => setIsYouTubeModalOpen(false)}
+        onLoadYouTube={handleLoadYouTube}
+      />
+
+      {/* 7. Paste Transcript Modal */}
+      <PasteTranscriptModal
+        isOpen={isPasteTranscriptModalOpen}
+        onClose={() => setIsPasteTranscriptModalOpen(false)}
+        onImportSubtitles={handleImportPastedSubtitles}
+        defaultDuration={duration}
       />
     </div>
   );

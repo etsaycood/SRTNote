@@ -126,6 +126,21 @@ graph TD
 
 ---
 
+### 階段十：YouTube 影片連結載入與智慧逐字稿貼上解析 (YouTube Iframe API & Paste Parser)
+* **需求與挑戰**：使用者常觀看 YouTube 線上公開課程或演講，希望直接貼入 YouTube 連結同步筆記，且因純前端無法直接避開 YouTube 字幕 CORS 限制，需提供快速流暢的逐字稿貼上與自動解析流程。
+* **技術實踐**：
+  * **YouTube Iframe Player API 動態整合**：
+    * 實作 `loadYouTubeIframeAPI` 動態按需注入 `<script src="https://www.youtube.com/iframe_api">`，無額外肥大相依套件。
+    * 支援標準網址、短網址（`youtu.be`）、嵌入式與代碼格式的正則擷取器 `extractYouTubeId`。
+    * 在 `VideoPanel` 內動態掛載 YouTube Player，透過 120ms 輪詢雙向同步全域 `currentTime`，支援空間跳轉（Seek）、暫停/播放、音量與速率聯動。
+  * **智慧逐字稿剪貼簿解析器 (`parsePastedTranscript`)**：
+    * 完美支援從 YouTube 複製之逐字稿格式（單行時間戳接續內文、或同列時間戳內文）。
+    * 支援自適應句長終點預估（以字數動態估算未提供 EndTime 之句尾秒數）。
+    * 支援取代現有字幕或接續追加模式，即時統計已解析句數。
+  * **UI 與互動全面支援**：
+    * 頂部導航列「個別上傳」與視訊面板中央均提供「貼上 YouTube 網址」捷徑。
+    * 逐字稿面板與導航列提供剪貼簿按鈕，支援一鍵開啟「貼上逐字稿文字」彈窗並提供測試範本。
+
 ## 📊 技術選型一覽表 (Technology Stack)
 
 | 領域 | 使用技術 / 套件 | 選型理由 |

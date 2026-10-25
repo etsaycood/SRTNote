@@ -17,8 +17,10 @@ import {
   SlidersHorizontal,
   Check,
   Plus,
-  X
+  X,
+  Clipboard
 } from 'lucide-react';
+import { YoutubeIcon } from './icons/YoutubeIcon';
 
 interface NavbarProps {
   projectTitle: string;
@@ -41,6 +43,8 @@ interface NavbarProps {
   onUploadSubtitles: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onUploadSlides: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onImportConfig: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onOpenYouTubeModal?: () => void;
+  onOpenPasteModal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -63,7 +67,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onUploadMedia,
   onUploadSubtitles,
   onUploadSlides,
-  onImportConfig
+  onImportConfig,
+  onOpenYouTubeModal,
+  onOpenPasteModal
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState(projectTitle);
@@ -187,6 +193,32 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>上傳簡報 (PDF/圖片)</span>
                 <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={onUploadSlides} className="hidden" />
               </label>
+
+              <div className="h-px bg-slate-800 my-1" />
+
+              {/* YouTube Link */}
+              {onOpenYouTubeModal && (
+                <button
+                  type="button"
+                  onClick={onOpenYouTubeModal}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-slate-800 text-slate-200 cursor-pointer transition-colors text-left"
+                >
+                  <YoutubeIcon className="w-4 h-4 text-red-500" />
+                  <span>貼上 YouTube 網址</span>
+                </button>
+              )}
+
+              {/* Paste Transcript */}
+              {onOpenPasteModal && (
+                <button
+                  type="button"
+                  onClick={onOpenPasteModal}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-slate-800 text-slate-200 cursor-pointer transition-colors text-left"
+                >
+                  <Clipboard className="w-4 h-4 text-blue-400" />
+                  <span>貼上逐字稿文字</span>
+                </button>
+              )}
 
               <div className="h-px bg-slate-800 my-1" />
 
