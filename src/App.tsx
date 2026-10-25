@@ -91,6 +91,38 @@ export default function App() {
     localStorage.setItem('lm_studio_config', JSON.stringify(newConfig));
   };
 
+  // Helper to safely revoke old object URLs
+  const revokeMediaUrl = (url?: string) => {
+    if (url && url.startsWith('blob:')) {
+      try {
+        URL.revokeObjectURL(url);
+      } catch (e) {}
+    }
+  };
+
+  const revokeSlideUrls = (slideList: SlideItem[]) => {
+    slideList.forEach((s) => {
+      if (s.imageUrl && s.imageUrl.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(s.imageUrl);
+        } catch (e) {}
+      }
+    });
+  };
+
+  // Cleanup object URLs on unmount
+  const mediaUrlRef = useRef(mediaUrl);
+  mediaUrlRef.current = mediaUrl;
+  const slidesRef = useRef(slides);
+  slidesRef.current = slides;
+
+  useEffect(() => {
+    return () => {
+      revokeMediaUrl(mediaUrlRef.current);
+      revokeSlideUrls(slidesRef.current);
+    };
+  }, []);
+
   // --- Audio Element Ref (for real sound when media file is attached) ---
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -117,6 +149,7 @@ export default function App() {
       audio.addEventListener('ended', onEnd);
 
       return () => {
+        audio.pause();
         audio.removeEventListener('loadedmetadata', onLoadedMeta);
         audio.removeEventListener('timeupdate', onTime);
         audio.removeEventListener('ended', onEnd);
@@ -130,7 +163,9 @@ export default function App() {
       audioRef.current.playbackRate = playbackRate;
       audioRef.current.volume = isMuted ? 0 : volume;
       if (isPlaying && audioRef.current.paused) {
-        audioRef.current.play().catch(() => {});
+        audioRef.current.play().catch(() => {
+          setIsPlaying(false);
+        });
       } else if (!isPlaying && !audioRef.current.paused) {
         audioRef.current.pause();
       }
@@ -233,6 +268,7 @@ export default function App() {
 
       // If media file detected in folder
       if (data.mediaUrl) {
+        revokeMediaUrl(mediaUrl);
         setMediaUrl(data.mediaUrl);
         setMediaType(data.mediaType);
       }
@@ -255,6 +291,7 @@ export default function App() {
 
       // If slide images detected in folder
       if (data.slideFiles.length > 0 && (!data.config || !data.config.slides)) {
+        revokeSlideUrls(slides);
         const count = data.slideFiles.length;
         const step = count > 1 ? effectiveDuration / count : 0;
         const newSlides: SlideItem[] = data.slideFiles.map((sf, idx) => ({
@@ -330,6 +367,7 @@ export default function App() {
   const handleUploadMedia = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      revokeMediaUrl(mediaUrl);
       const url = URL.createObjectURL(file);
       const isVid = file.type.startsWith('video') || /\.(mp4|webm|mkv|mov)$/i.test(file.name);
       setMediaUrl(url);
@@ -378,6 +416,7 @@ export default function App() {
           }
         );
         if (pdfSlides.length > 0) {
+          revokeSlideUrls(slides);
           setSlides(pdfSlides);
         }
       } catch (err: any) {
@@ -392,6 +431,7 @@ export default function App() {
     // Filter image files
     const imgFiles = fileList.filter((f) => f.type.startsWith('image/'));
     if (imgFiles.length > 0) {
+      revokeSlideUrls(slides);
       imgFiles.sort((a, b) =>
         a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
       );
@@ -425,7 +465,10 @@ export default function App() {
           const parsed: ProjectConfig = JSON.parse(event.target?.result as string);
           if (parsed.title) setProjectTitle(parsed.title);
           if (parsed.subtitles) setSubtitles(parsed.subtitles);
-          if (parsed.slides) setSlides(parsed.slides);
+          if (parsed.slides) {
+            revokeSlideUrls(slides);
+            setSlides(parsed.slides);
+          }
           if (parsed.aiSummary) setAiSummary(parsed.aiSummary);
           if (parsed.mediaDuration) setDuration(parsed.mediaDuration);
         } catch (err) {
@@ -438,6 +481,8 @@ export default function App() {
 
   // --- Reset to Demo Project ---
   const handleLoadDemoProject = () => {
+    revokeMediaUrl(mediaUrl);
+    revokeSlideUrls(slides);
     setProjectTitle(SAMPLE_PROJECT.title);
     setMediaUrl(undefined);
     setMediaType('audio');

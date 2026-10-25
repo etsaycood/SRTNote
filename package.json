@@ -9,7 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@types/dompurify": "^3.0.5",
     "clsx": "^2.1.1",
+    "dompurify": "^3.4.17",
     "lucide-react": "^1.16.0",
     "marked": "^15.0.7",
     "pdfjs-dist": "^3.11.174",

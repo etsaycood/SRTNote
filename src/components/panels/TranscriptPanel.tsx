@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { SubtitleItem } from '../../types';
 import { formatTime, formatTimePrecise, parseTimeToSeconds } from '../../utils/timeFormatter';
 import { exportToSRT } from '../../utils/srtParser';
@@ -47,16 +47,31 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const activeLineRef = useRef<HTMLDivElement>(null);
+  const lastScrolledSubIdRef = useRef<string | null>(null);
 
-  // Auto-scroll to active subtitle
+  // Determine currently active subtitle ID from full subtitle list
+  const activeSubId = useMemo(() => {
+    if (!subtitles || subtitles.length === 0) return null;
+    const found = subtitles.find(
+      (s, idx) =>
+        currentTime >= s.startTime &&
+        (idx === subtitles.length - 1 || currentTime < (subtitles[idx + 1]?.startTime ?? (s.endTime || s.startTime + 3)))
+    );
+    return found ? found.id : null;
+  }, [subtitles, currentTime]);
+
+  // Auto-scroll to active subtitle ONLY when the active subtitle changes (eliminating 100ms stutter)
   useEffect(() => {
-    if (autoScroll && activeLineRef.current && containerRef.current && !isEditMode) {
-      activeLineRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
-      });
+    if (autoScroll && activeLineRef.current && containerRef.current && !isEditMode && activeSubId) {
+      if (activeSubId !== lastScrolledSubIdRef.current) {
+        lastScrolledSubIdRef.current = activeSubId;
+        activeLineRef.current.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+      }
     }
-  }, [currentTime, autoScroll, isEditMode]);
+  }, [activeSubId, autoScroll, isEditMode]);
 
   // Handle line updates
   const handleLineChange = (id: string, field: keyof SubtitleItem, value: any) => {
@@ -236,10 +251,8 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
             查無相符逐字稿內容
           </div>
         ) : (
-          filteredSubtitles.map((sub, idx) => {
-            const isCurrent =
-              currentTime >= sub.startTime &&
-              (idx === subtitles.length - 1 || currentTime < (subtitles[idx + 1]?.startTime ?? sub.endTime + 1));
+          filteredSubtitles.map((sub) => {
+            const isCurrent = sub.id === activeSubId;
 
             return (
               <div

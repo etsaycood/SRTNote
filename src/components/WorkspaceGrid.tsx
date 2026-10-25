@@ -162,6 +162,20 @@ export const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({
 
   // --- Drag & Drop Handlers ---
   const handleDragStart = (e: React.DragEvent, panelId: PanelId) => {
+    const target = e.target as HTMLElement;
+    // If dragging starts from an interactive control or content element, prevent drag
+    if (target.closest('input, textarea, select, button, .timestamp-badge, pre, code, p')) {
+      e.preventDefault();
+      return;
+    }
+    // Only allow dragging from the grip handle or header bar
+    const isGrip = !!target.closest('[title*="拖曳"], [data-drag-handle="true"]');
+    const isHeader = !!target.closest('.border-b, .backdrop-blur-md, header');
+    if (!isGrip && !isHeader) {
+      e.preventDefault();
+      return;
+    }
+
     e.dataTransfer.setData('text/plain', panelId);
     e.dataTransfer.effectAllowed = 'move';
     setDraggingPanelId(panelId);

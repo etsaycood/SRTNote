@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { LMStudioConfig } from '../types';
-import { fetchLMStudioModels } from '../utils/lmStudioClient';
+import { fetchLMStudioModels, validateApiBaseUrl } from '../utils/lmStudioClient';
 import { PROMPT_PRESETS, getPromptPreset } from '../utils/promptPresets';
 import { Cpu, Server, CheckCircle2, AlertCircle, RefreshCw, X, Sliders, Sparkles, RotateCcw } from 'lucide-react';
 
@@ -73,14 +73,22 @@ export const LMStudioModal: React.FC<LMStudioModalProps> = ({
   };
 
   const handleSave = () => {
-    onSave({
-      baseUrl,
-      model,
-      temperature,
-      systemPrompt,
-      presetId: activePresetId
-    });
-    onClose();
+    try {
+      const clean = validateApiBaseUrl(baseUrl);
+      onSave({
+        baseUrl: clean,
+        model,
+        temperature,
+        systemPrompt,
+        presetId: activePresetId
+      });
+      onClose();
+    } catch (err: any) {
+      setStatusMessage({
+        type: 'error',
+        text: err.message || '無效的 API 網址格式'
+      });
+    }
   };
 
   return (

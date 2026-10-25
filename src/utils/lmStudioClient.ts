@@ -32,10 +32,30 @@ export const DEFAULT_LM_STUDIO_CONFIG: LMStudioConfig = {
 };
 
 /**
+ * Validate and clean API Base URL
+ */
+export function validateApiBaseUrl(baseUrl: string): string {
+  const trimmed = baseUrl ? baseUrl.trim() : '';
+  if (!trimmed) {
+    throw new Error('API Base URL 不能為空');
+  }
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch (e) {
+    throw new Error('無效的 URL 格式，請確認是否包含 http:// 或 https://');
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error('僅支援 http 或 https 協議之端點');
+  }
+  return trimmed.replace(/\/+$/, '');
+}
+
+/**
  * Fetch available models from LM Studio
  */
 export async function fetchLMStudioModels(baseUrl: string): Promise<string[]> {
-  const cleanBase = baseUrl.replace(/\/+$/, '');
+  const cleanBase = validateApiBaseUrl(baseUrl);
   const url = `${cleanBase}/models`;
 
   try {
@@ -58,7 +78,7 @@ export async function fetchLMStudioModels(baseUrl: string): Promise<string[]> {
     if (baseUrl.includes('localhost')) {
       throw new Error('無法連線至 localhost。若使用本機請嘗試 http://127.0.0.1:1234/v1，若為內網機器請使用如 http://192.168.x.x:1234/v1，並確認勾選 Enable CORS。');
     }
-    throw new Error(`連線至 API 伺服器 (${baseUrl}) 失敗。請檢查：1. API 服務是否啟動 2. 是否開啟 CORS 跨域 3. 網路防火牆是否允許。`);
+    throw new Error(err.message || `連線至 API 伺服器 (${baseUrl}) 失敗。請檢查：1. API 服務是否啟動 2. 是否開啟 CORS 跨域 3. 網路防火牆是否允許。`);
   }
 }
 
@@ -93,7 +113,13 @@ export async function streamLMStudioSummary({
   onComplete: (fullText: string) => void;
   onError: (error: Error) => void;
 }): Promise<void> {
-  const cleanBase = config.baseUrl.replace(/\/+$/, '');
+  let cleanBase: string;
+  try {
+    cleanBase = validateApiBaseUrl(config.baseUrl);
+  } catch (err: any) {
+    onError(err);
+    return;
+  }
   const url = `${cleanBase}/chat/completions`;
 
   // 1. 執行背景優化：智慧精煉與時間標記打點
@@ -179,6 +205,18 @@ export async function streamLMStudioSummary({
     const reader = response.body.getReader();
     const decoder = new TextDecoder('utf-8');
     let buffer = '';
+    let lastFlushTime = 0;
+    let pendingDelta = '';
+
+    const flushStream = (force = false) => {
+      const now = Date.now();
+      if ((force && (pendingDelta || fullText)) || now - lastFlushTime >= 80) {
+        lastFlushTime = now;
+        const decodedFullText = decodeIdsToTimestamps(fullText, idMap);
+        onChunk(pendingDelta, decodedFullText);
+        pendingDelta = '';
+      }
+    };
 
     while (true) {
       const { done, value } = await reader.read();
@@ -201,13 +239,14 @@ export async function streamLMStudioSummary({
             const delta = data.choices?.[0]?.delta?.content || '';
             if (delta) {
               fullText += delta;
+              pendingDelta += delta;
               tokenCount++;
-              // 即時將 AI 回傳的 [#12] 或 #12 還原為標準 [HH:MM:SS]
-              const decodedFullText = decodeIdsToTimestamps(fullText, idMap);
-              onChunk(delta, decodedFullText);
+
+              // Throttle UI update every ~80ms to avoid locking the UI thread with constant React re-renders & regex parsing
+              flushStream(false);
 
               if (tokenCount % 35 === 0) {
-                onStatus?.(`正在即時串流輸出中 (已生成約 ${decodedFullText.length} 字)...`);
+                onStatus?.(`正在即時串流輸出中 (已生成約 ${fullText.length} 字)...`);
               }
             }
           } catch (e) {
@@ -216,6 +255,8 @@ export async function streamLMStudioSummary({
         }
       }
     }
+
+    flushStream(true);
 
     if (inactivityTimer) clearTimeout(inactivityTimer);
     const finalDecoded = decodeIdsToTimestamps(fullText, idMap);

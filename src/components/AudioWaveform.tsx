@@ -74,15 +74,27 @@ export const AudioWaveform: React.FC<AudioWaveformProps> = ({
 
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
+    const targetWidth = Math.max(10, Math.floor(rect.width * dpr));
+    const targetHeight = Math.max(10, Math.floor(rect.height * dpr));
+
+    // Only update canvas dimensions when client rect actually changes
+    if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+    }
+
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.scale(dpr, dpr);
 
     const width = rect.width;
     const height = rect.height;
 
-    ctx.clearRect(0, 0, width, height);
-    if (duration <= 0) return;
+    if (duration <= 0) {
+      ctx.restore();
+      return;
+    }
 
     const centerY = height / 2;
 
@@ -247,6 +259,7 @@ export const AudioWaveform: React.FC<AudioWaveformProps> = ({
       ctx.arc(playX, centerY, 5, 0, Math.PI * 2);
       ctx.fill();
     }
+    ctx.restore();
   }, [currentTime, duration, subtitleVADPeaks, waveGain, isZoomMode, subtitles, timeRange]);
 
   // Mouse seeking & range drag handlers

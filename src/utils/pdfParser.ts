@@ -20,7 +20,7 @@ export async function convertPdfToSlides(
 ): Promise<SlideItem[]> {
   try {
     const arrayBuffer = file instanceof File ? await file.arrayBuffer() : file;
-    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer, isEvalSupported: false });
     const pdfDoc = await loadingTask.promise;
     const numPages = pdfDoc.numPages;
 
@@ -54,8 +54,11 @@ export async function convertPdfToSlides(
         viewport: viewport
       }).promise;
 
-      // Convert to high-quality JPEG data URL
-      const imageUrl = canvas.toDataURL('image/jpeg', 0.88);
+      // Convert to efficient Blob URL instead of giant Base64 Data URL to save memory & JSON size
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.88)
+      );
+      const imageUrl = blob ? URL.createObjectURL(blob) : canvas.toDataURL('image/jpeg', 0.88);
 
       slides.push({
         id: `slide_${Date.now()}_${pageNum}`,

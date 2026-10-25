@@ -26,6 +26,7 @@ import {
   Play
 } from 'lucide-react';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
 interface AISummaryPanelProps {
   summary: string;
@@ -273,7 +274,10 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
       html = html.replace(timestampRegex, (_match, timeStr) => {
         return `<button type="button" class="timestamp-badge" data-time="${timeStr}">⏱️ ${timeStr}</button>`;
       });
-      return html;
+      return DOMPurify.sanitize(html, {
+        ADD_TAGS: ['button'],
+        ADD_ATTR: ['data-time', 'type', 'class']
+      });
     } catch (e) {
       return summary;
     }

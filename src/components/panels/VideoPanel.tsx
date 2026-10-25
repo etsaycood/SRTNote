@@ -82,6 +82,9 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
     }
   }, [mediaUrl]);
 
+  const currentTimeRef = useRef(currentTime);
+  currentTimeRef.current = currentTime;
+
   // Audio Spectrum visualizer canvas animation when playing pure audio or demo
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -99,9 +102,10 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
       const barCount = 48;
       const barWidth = (width / barCount) * 0.7;
       const gap = (width / barCount) * 0.3;
+      const curTime = currentTimeRef.current;
 
       for (let i = 0; i < barCount; i++) {
-        const t = (currentTime * 4) + (i * 0.2) + phase;
+        const t = (curTime * 4) + (i * 0.2) + phase;
         const amplitude = isPlaying ? (Math.sin(t) * 0.4 + Math.cos(t * 1.5) * 0.3 + 0.4) : 0.08;
         const barHeight = Math.max(6, amplitude * (height * 0.65));
 
@@ -130,7 +134,7 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isPlaying, currentTime]);
+  }, [isPlaying]);
 
   const handleVideoMetadataLoaded = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
     const vid = e.currentTarget;
