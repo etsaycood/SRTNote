@@ -13,17 +13,17 @@
 
 ```mermaid
 graph TD
-    A[本地資料夾 / 本機檔案] -->|File System Access API| B(SyncNote Core App)
-    B --> C[Video/Audio Player 視訊與語音頻譜]
-    B --> D[PDF / Image Slides 簡報自動翻頁]
-    B --> E[Transcript 逐字稿行內校對]
-    B --> F[Audio Waveform 雙向互動時間軸]
+    A["本地資料夾 / 本機檔案"] -->|"File System Access API"| B["SyncNote Core App"]
+    B --> C["Video/Audio Player 視訊與語音頻譜"]
+    B --> D["PDF / Image Slides 簡報自動翻頁"]
+    B --> E["Transcript 逐字稿行內校對"]
+    B --> F["Audio Waveform 雙向互動時間軸"]
     
-    E -->|原生 Intl.Segmenter 斷詞| G[Context Window 智慧精煉器]
-    G -->|時間戳 ID 壓縮 [#ID]| H[本地 LLM API / LM Studio]
-    H -->|80ms 節流 SSE 串流| I[AI Smart Summary 重點整理]
-    I -->|DOMPurify 消毒 & 錨點還原| J[互動式時間標記筆記]
-    J -->|點擊時間戳| C
+    E -->|"原生 Intl.Segmenter 斷詞"| G["Context Window 智慧精煉器"]
+    G -->|"時間戳 ID 壓縮 (#ID)"| H["本地 LLM API / LM Studio"]
+    H -->|"80ms 節流 SSE 串流"| I["AI Smart Summary 重點整理"]
+    I -->|"DOMPurify 消毒 & 錨點還原"| J["互動式時間標記筆記"]
+    J -->|"點擊時間戳"| C
 ```
 
 ---
