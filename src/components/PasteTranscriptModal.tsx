@@ -86,7 +86,7 @@ export const PasteTranscriptModal: React.FC<PasteTranscriptModalProps> = ({
               <p className="text-[11px] text-slate-300">
                 1. 在 YouTube 影片下方點擊「... 更多」選單 ➔ 點選「<strong>顯示逐字稿</strong>」。<br />
                 2. 按 <kbd className="px-1.5 py-0.5 bg-slate-800 rounded font-mono text-[10px]">Ctrl+A</kbd> 或手動全選逐字稿並複製。<br />
-                3. 直接貼入下方文字框，系統將自動解析時間戳（如 <code>0:15 文字內容</code>）！
+                3. 直接貼入下方文字框，即使帶有 YouTube 產生的隱藏秒數標記（如 <code>0:1818 秒歌詞...</code>）也能自動辨識！
               </p>
             </div>
           </div>
@@ -108,7 +108,7 @@ export const PasteTranscriptModal: React.FC<PasteTranscriptModalProps> = ({
             </div>
             <textarea
               autoFocus
-              placeholder="請在此貼上逐字稿內容...&#10;&#10;支援格式範例 1:&#10;0:00&#10;各位好，會議開始&#10;0:15&#10;今天討論專案進度&#10;&#10;支援格式範例 2:&#10;00:00 [王經理] 各位好，會議開始&#10;00:15 [陳工程師] 好的，收到"
+              placeholder="請在此貼上逐字稿內容...&#10;&#10;支援格式範例 1 (YouTube 複製):&#10;0:011 秒[♪♪♪]&#10;0:1818 秒♪ 歌詞或對話內容 ♪&#10;&#10;支援格式範例 2 (時間與內文分行):&#10;0:00&#10;各位好，會議開始&#10;0:15&#10;今天討論專案進度&#10;&#10;支援格式範例 3:&#10;00:00 [王經理] 各位好，會議開始&#10;00:15 [陳工程師] 好的，收到"
               value={rawText}
               onChange={(e) => setRawText(e.target.value)}
               className="flex-1 w-full bg-slate-950 border border-slate-700/80 rounded-xl p-3 text-xs text-white placeholder-slate-500 font-mono focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 custom-scrollbar resize-none"

@@ -85,16 +85,22 @@ function extractSpeaker(text: string): { speaker: string; text: string } {
     return { speaker: vttMatch[1].trim(), text: vttMatch[2].trim() };
   }
 
-  // Colon format "王經理：各位好" or "王經理: 各位好"
-  const colonMatch = text.match(/^([^\n:：]{2,10})[:：]\s*(.*)$/s);
-  if (colonMatch) {
+  // Colon format "王經理：各位好" or "王經理: 各位好" (must have content after colon)
+  const colonMatch = text.match(/^([^\n:：]{2,10})[:：]\s*(.+)$/s);
+  if (colonMatch && colonMatch[2].trim()) {
     return { speaker: colonMatch[1].trim(), text: colonMatch[2].trim() };
   }
 
-  // Bracket format "【王經理】各位好" or "[王經理] 各位好"
-  const bracketMatch = text.match(/^[【\[]([^\n\]】]{2,10})[】\]]\s*(.*)$/s);
-  if (bracketMatch) {
-    return { speaker: bracketMatch[1].trim(), text: bracketMatch[2].trim() };
+  // Bracket format "【王經理】各位好" or "[王經理] 各位好" (must have content after bracket)
+  const bracketMatch = text.match(/^[【\[]([^\n\]】]{2,10})[】\]]\s*(.+)$/s);
+  if (bracketMatch && bracketMatch[2].trim()) {
+    const candidate = bracketMatch[1].trim();
+    // Exclude music/sound cue notations
+    const isSoundCue = /[♪♫#*]/.test(candidate) ||
+      /^(?:音樂|music|掌聲|applause|笑聲|laughter|歡呼|cheering|無聲|inaudible)$/i.test(candidate);
+    if (!isSoundCue) {
+      return { speaker: candidate, text: bracketMatch[2].trim() };
+    }
   }
 
   return { speaker: '', text };
@@ -143,9 +149,10 @@ function formatSrtTime(sec: number): string {
 /**
  * Intelligently parse raw pasted text into SubtitleItem[]
  * Supports:
- * 1. YouTube transcript format (time on one line, text on next line, or time and text together)
- * 2. Formats with [MM:SS] or MM:SS at line beginning
- * 3. Standard SRT / VTT formats
+ * 1. YouTube transcript format (with or without merged seconds badge like "0:011 秒[♪♪♪]")
+ * 2. Multi-line YouTube transcript format (time, duration badge, text on separate lines)
+ * 3. Formats with [MM:SS] or MM:SS at line beginning
+ * 4. Standard SRT / VTT formats
  */
 export function parsePastedTranscript(rawText: string, defaultDuration = 0): SubtitleItem[] {
   if (!rawText || !rawText.trim()) return [];
@@ -159,9 +166,20 @@ export function parsePastedTranscript(rawText: string, defaultDuration = 0): Sub
   const lines = trimmed.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
   const items: { startTime: number; text: string; speaker?: string }[] = [];
 
-  // Match timestamps like "0:00", "00:15", "1:23:45", "[01:23]"
-  const timeOnlyRegex = /^\[?((?:\d{1,2}:)?\d{1,2}:\d{2}(?:[,.]\d{1,3})?)\]?$/;
-  const timeWithTextRegex = /^\[?((?:\d{1,2}:)?\d{1,2}:\d{2}(?:[,.]\d{1,3})?)\]?[\s:：]+(.+)$/;
+  // Match standalone duration badge line: e.g. "1 秒", "18 秒", "1 second", "65 秒", "1分5秒"
+  const durationBadgeOnlyRegex = /^\d+\s*(?:分(?:鐘)?\s*\d*\s*)?(?:秒|s|sec|secs|second|seconds)$/i;
+
+  // Match timestamps at start of line, with optional YouTube duration badge and subtitle text:
+  // Examples:
+  // - "0:011 秒[♪♪♪]" -> time: "0:01", badge: "1 秒", text: "[♪♪♪]"
+  // - "0:1818 秒♪ We're no strangers..." -> time: "0:18", badge: "18 秒", text: "♪ We're no strangers..."
+  // - "0:00 各位好" -> time: "0:00", text: "各位好"
+  // - "0:14" -> time: "0:14", text: "" (subsequent line contains text)
+  // - "[01:23.50] 王經理: 開會" -> time: "01:23.50", text: "王經理: 開會"
+  const timeLineRegex = /^[\[(]?((?:(?:\d{1,2}:)?\d{1,2}:\d{2})(?:[,.]\d{1,3})?)[\])]?(?:\s*\d+\s*(?:分(?:鐘)?\s*\d*\s*)?(?:秒|s|sec|secs|second|seconds))?[\s:：\-–—]*(.*)$/i;
+
+  // YouTube transcript UI junk lines before any subtitles
+  const ytUiJunkRegex = /^(?:逐字稿|開啟逐字稿|顯示逐字稿|搜尋逐字稿|Transcript|Show transcript)$/i;
 
   let pendingTime: number | null = null;
 
@@ -169,25 +187,50 @@ export function parsePastedTranscript(rawText: string, defaultDuration = 0): Sub
     const line = lines[i].trim();
     if (!line) continue;
 
-    // Check if line is just a timestamp (common in YouTube transcript copy)
-    const timeOnlyMatch = line.match(timeOnlyRegex);
-    if (timeOnlyMatch) {
-      pendingTime = parseTimeToSeconds(timeOnlyMatch[1]);
+    // Filter UI header text if at beginning
+    if (items.length === 0 && pendingTime === null && ytUiJunkRegex.test(line)) {
       continue;
     }
 
-    // Check if line starts with timestamp followed by text
-    const timeWithTextMatch = line.match(timeWithTextRegex);
-    if (timeWithTextMatch) {
-      const time = parseTimeToSeconds(timeWithTextMatch[1]);
-      const content = timeWithTextMatch[2].trim();
-      const { speaker, text } = extractSpeaker(content);
-      items.push({ startTime: time, text: text || content, speaker });
-      pendingTime = null;
+    // Skip standalone YouTube duration badge lines (e.g. "1 秒")
+    if (durationBadgeOnlyRegex.test(line)) {
       continue;
     }
 
-    // If we have a pending timestamp from previous line, this line is its text!
+    // Check if line starts with timestamp
+    const match = line.match(timeLineRegex);
+    if (match) {
+      const timeStr = match[1];
+      const time = parseTimeToSeconds(timeStr);
+      let content = match[2]?.trim() || '';
+
+      // Clean up any remaining repeated YouTube second count or badge (e.g. "18" from "0:1818" or "18 秒")
+      if (content) {
+        const totalSecs = Math.floor(time);
+        const mins = Math.floor(totalSecs / 60);
+        const remSecs = totalSecs % 60;
+        const redundantPattern = new RegExp(
+          `^(?:${totalSecs}\\s*(?:秒|s|sec|secs|second|seconds)?|` +
+          `(?:${mins}\\s*(?:分|min|mins|minutes?)\\s*)?${remSecs}\\s*(?:秒|s|sec|secs|second|seconds)|` +
+          `\\d+\\s*(?:分(?:鐘)?\\s*\\d*\\s*)?(?:秒|s|sec|secs|second|seconds))[\\s:：\\-–—]*`,
+          'i'
+        );
+        content = content.replace(redundantPattern, '').trim();
+      }
+
+      if (content) {
+        // Line has timestamp + subtitle content
+        const { speaker, text } = extractSpeaker(content);
+        items.push({ startTime: time, text: text || content, speaker });
+        pendingTime = null;
+      } else {
+        // Line has only timestamp; next non-badge line is its text
+        pendingTime = time;
+      }
+      continue;
+    }
+
+    // If we have a pending timestamp from previous line, this line is its content
     if (pendingTime !== null) {
       const { speaker, text } = extractSpeaker(line);
       items.push({ startTime: pendingTime, text: text || line, speaker });
