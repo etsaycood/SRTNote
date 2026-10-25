@@ -8,9 +8,12 @@
 ![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?logo=tailwind-css&logoColor=white)
 ![LM Studio](https://img.shields.io/badge/LM%20Studio-Local%20AI-blueviolet)
 ![License](https://img.shields.io/badge/License-MIT-green)
+[![Deploy to GitHub Pages](https://github.com/etsaycood/SRTNote/actions/workflows/deploy.yml/badge.svg)](https://github.com/etsaycood/SRTNote/actions/workflows/deploy.yml)
 
 **打破視訊、簡報、逐字稿與 AI 筆記邊界的新一代沉浸式學習工作台**  
 純前端本地運行・零資料上雲・原生中文斷詞優化・毫秒級多維時間同步
+
+🔗 **線上展示網址**：[**https://etsaycood.github.io/SRTNote/**](https://etsaycood.github.io/SRTNote/)
 
 [✨ 核心特色](#-核心特色) • [📸 介面預覽](#-介面預覽) • [🚀 快速啟動](#-快速啟動) • [🤖 本地-ai-設定指南](#-本地-ai-設定指南) • [📖 開發歷程紀錄](#-開發歷程與技術細節)
 
