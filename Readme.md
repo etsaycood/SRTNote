@@ -36,10 +36,6 @@
 內建語意搜尋、自動平滑滾動（去抖動設計），支援以 `+0.5s` / `-0.5s` 微調字幕時間與即時匯出標準 `.srt`。
 ![逐字稿面板與校對模式](./docs/images/transcript_panel.png)
 
-### 📊 PDF 簡報解析與翻頁時間軸管理
-支援直接上傳 PDF 講義轉為高解析投影片，具備「首頁在最前、末頁在最後、其餘平均展開」的時間軸排程演算法。
-![PDF 簡報時間軸管理彈窗](./docs/images/slide_timeline_modal.png)
-
 ### ⚙️ 本地 LLM API 連線與自動模型偵測
 直接串接本地 LM Studio 或任何 OpenAI 相容端點，保護商業隱私，免金鑰、免雲端成本。
 ![API 連線與模型設定彈窗](./docs/images/api_settings_modal.png)
