@@ -19,7 +19,8 @@ import {
   Plus,
   X,
   Clipboard,
-  Settings
+  Settings,
+  Smartphone
 } from 'lucide-react';
 import { YoutubeIcon } from './icons/YoutubeIcon';
 
@@ -46,6 +47,8 @@ interface NavbarProps {
   onImportConfig: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onOpenYouTubeModal?: () => void;
   onOpenPasteModal?: () => void;
+  isMobileMode?: boolean;
+  onToggleMobileMode?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -70,7 +73,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onUploadSlides,
   onImportConfig,
   onOpenYouTubeModal,
-  onOpenPasteModal
+  onOpenPasteModal,
+  isMobileMode = false,
+  onToggleMobileMode
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState(projectTitle);
@@ -257,6 +262,25 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </button>
 
+        {/* 手機模式按鈕 (Icon only) */}
+        {onToggleMobileMode && (
+          <button
+            onClick={onToggleMobileMode}
+            className={`p-2 rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center ${
+              isMobileMode
+                ? 'bg-blue-600/30 text-blue-400 border border-blue-500/50 shadow-sm ring-1 ring-blue-500/30'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700'
+            }`}
+            title={
+              isMobileMode
+                ? '手機模式：已開啟 (上下窗格、左右滑動、極簡播放列，點擊切換為電腦模式)'
+                : '切換為手機/平板模式 (點擊開啟)'
+            }
+          >
+            <Smartphone className="w-4 h-4" />
+          </button>
+        )}
+
         {/* 統一設定入口 (Icon only) */}
         <div className="relative">
           <button
@@ -393,7 +417,38 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
               </div>
 
-              {/* 3. 示範專案 */}
+              {/* 3. 手機模式切換 */}
+              {onToggleMobileMode && (
+                <div className="py-2 border-b border-slate-800">
+                  <button
+                    onClick={() => {
+                      onToggleMobileMode();
+                      setShowSettingsDropdown(false);
+                    }}
+                    className={`w-full py-2 px-2.5 rounded-xl text-xs transition-colors flex items-center justify-between ${
+                      isMobileMode
+                        ? 'bg-blue-600/20 text-blue-300 border border-blue-500/30'
+                        : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Smartphone className="w-3.5 h-3.5 text-blue-400" />
+                      <span>手機/平板模式</span>
+                    </span>
+                    <span
+                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        isMobileMode
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-slate-700 text-slate-400'
+                      }`}
+                    >
+                      {isMobileMode ? '已開啟' : '電腦模式'}
+                    </span>
+                  </button>
+                </div>
+              )}
+
+              {/* 4. 示範專案 */}
               <div className="pt-2">
                 <button
                   onClick={() => {

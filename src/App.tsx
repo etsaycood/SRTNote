@@ -14,6 +14,7 @@ import {
 import { Navbar } from './components/Navbar';
 import { PlayerBar } from './components/PlayerBar';
 import { WorkspaceGrid } from './components/WorkspaceGrid';
+import { MobileWorkspaceGrid } from './components/MobileWorkspaceGrid';
 import { VideoPanel } from './components/panels/VideoPanel';
 import { SlidePanel } from './components/panels/SlidePanel';
 import { TranscriptPanel } from './components/panels/TranscriptPanel';
@@ -22,6 +23,16 @@ import { LMStudioModal } from './components/LMStudioModal';
 import { SlideTimelineModal } from './components/SlideTimelineModal';
 import { YouTubeModal } from './components/YouTubeModal';
 import { PasteTranscriptModal } from './components/PasteTranscriptModal';
+
+// Helper to detect non-PC devices (mobile phones or tablets)
+const detectNonPC = () => {
+  if (typeof window === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet/i.test(ua);
+  const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  const isNarrowScreen = window.innerWidth <= 820;
+  return isMobileUA || (hasTouch && isNarrowScreen);
+};
 
 export default function App() {
   // --- Project State ---
@@ -58,6 +69,15 @@ export default function App() {
     end: 1800
   });
 
+  // --- Mobile Mode State ---
+  const [isMobileMode, setIsMobileMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem('srtnote_mobile_mode');
+    if (saved !== null) {
+      return saved === 'true';
+    }
+    return detectNonPC();
+  });
+
   // --- Panel Layout & Open State ---
   // Default positions: [TopLeft, TopRight, BottomLeft, BottomRight]
   const [panelPositions, setPanelPositions] = useState<PanelId[]>([
@@ -66,13 +86,47 @@ export default function App() {
     'transcript',
     'summary'
   ]);
-  const [openPanels, setOpenPanels] = useState<PanelId[]>([
-    'video',
-    'slides',
-    'transcript',
-    'summary'
-  ]);
+  const [openPanels, setOpenPanels] = useState<PanelId[]>(() => {
+    const saved = localStorage.getItem('srtnote_mobile_mode');
+    const isMobileInitial = saved !== null ? saved === 'true' : detectNonPC();
+    // 預設非電腦/手機模式下只開啟「影音視窗」及「即時逐字稿」分別在上下窗格
+    if (isMobileInitial) {
+      return ['video', 'transcript'];
+    }
+    return ['video', 'slides', 'transcript', 'summary'];
+  });
   const [activeMaximizedPanel, setActiveMaximizedPanel] = useState<PanelId | null>(null);
+
+  // Auto-detect resize if user hasn't explicitly locked preference
+  useEffect(() => {
+    const handleResize = () => {
+      const saved = localStorage.getItem('srtnote_mobile_mode');
+      if (saved === null) {
+        setIsMobileMode(detectNonPC());
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handleToggleMobileMode = () => {
+    setIsMobileMode((prev) => {
+      const next = !prev;
+      localStorage.setItem('srtnote_mobile_mode', String(next));
+      if (next) {
+        // Switching to mobile mode: ensure video and transcript are open
+        setOpenPanels((current) => {
+          const hasVideo = current.includes('video');
+          const hasTranscript = current.includes('transcript');
+          if (!hasVideo && !hasTranscript) {
+            return ['video', 'transcript'];
+          }
+          return current;
+        });
+      }
+      return next;
+    });
+  };
 
   // --- Modals State ---
   const [isLMModalOpen, setIsLMModalOpen] = useState(false);
@@ -594,10 +648,15 @@ export default function App() {
   };
 
   const handleResetLayout = () => {
-    const all: PanelId[] = ['video', 'slides', 'transcript', 'summary'];
-    setOpenPanels(all);
-    setPanelPositions(all);
-    setActiveMaximizedPanel(null);
+    if (isMobileMode) {
+      setOpenPanels(['video', 'transcript']);
+      setActiveMaximizedPanel(null);
+    } else {
+      const all: PanelId[] = ['video', 'slides', 'transcript', 'summary'];
+      setOpenPanels(all);
+      setPanelPositions(all);
+      setActiveMaximizedPanel(null);
+    }
   };
 
   const toggleMaximizePanel = (panelId: PanelId) => {
@@ -728,22 +787,36 @@ export default function App() {
         onImportConfig={handleImportConfig}
         onOpenYouTubeModal={() => setIsYouTubeModalOpen(true)}
         onOpenPasteModal={() => setIsPasteTranscriptModalOpen(true)}
+        isMobileMode={isMobileMode}
+        onToggleMobileMode={handleToggleMobileMode}
       />
 
-      {/* 2. Main Resizable Workspace (Supports 0, 1, 2, 3, 4 panels) */}
+      {/* 2. Main Resizable Workspace (Desktop Grid or Mobile Top/Bottom Panes) */}
       <main className="flex-1 w-full min-h-0 relative">
-        <WorkspaceGrid
-          openPanels={openPanels}
-          activeMaximizedPanel={activeMaximizedPanel}
-          onSwapPanels={handleSwapPanels}
-          renderPanel={renderPanel}
-          onReopenPanel={handleOpenPanel}
-          onResetLayout={handleResetLayout}
-        />
+        {isMobileMode ? (
+          <MobileWorkspaceGrid
+            openPanels={openPanels}
+            activeMaximizedPanel={activeMaximizedPanel}
+            renderPanel={renderPanel}
+            onToggleMaximize={toggleMaximizePanel}
+            onClosePanel={handleClosePanel}
+            onReopenPanel={handleOpenPanel}
+            onResetLayout={handleResetLayout}
+          />
+        ) : (
+          <WorkspaceGrid
+            openPanels={openPanels}
+            activeMaximizedPanel={activeMaximizedPanel}
+            onSwapPanels={handleSwapPanels}
+            renderPanel={renderPanel}
+            onReopenPanel={handleOpenPanel}
+            onResetLayout={handleResetLayout}
+          />
+        )}
       </main>
 
-      {/* 3. Bottom Master Playback Bar */}
-      <footer className="w-full px-4 pb-3 pt-1 flex-shrink-0">
+      {/* 3. Bottom Master Playback Bar (Minimal YouTube-style when in mobile mode) */}
+      <footer className="w-full px-2 sm:px-4 pb-2 sm:pb-3 pt-1 flex-shrink-0">
         <PlayerBar
           isPlaying={isPlaying}
           currentTime={currentTime}
@@ -763,6 +836,7 @@ export default function App() {
           onChangePlaybackRate={setPlaybackRate}
           onChangeVolume={setVolume}
           onToggleMute={() => setIsMuted(!isMuted)}
+          isMobile={isMobileMode}
         />
       </footer>
 

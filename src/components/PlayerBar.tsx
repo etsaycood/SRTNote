@@ -31,6 +31,7 @@ interface PlayerBarProps {
   onChangePlaybackRate: (rate: number) => void;
   onChangeVolume: (vol: number) => void;
   onToggleMute: () => void;
+  isMobile?: boolean;
 }
 
 export const PlayerBar: React.FC<PlayerBarProps> = ({
@@ -51,12 +52,154 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
   onSeek,
   onChangePlaybackRate,
   onChangeVolume,
-  onToggleMute
+  onToggleMute,
+  isMobile = false
 }) => {
+  const scrubberRef = React.useRef<HTMLDivElement>(null);
+  const [isScrubbing, setIsScrubbing] = React.useState(false);
+  const [scrubTime, setScrubTime] = React.useState<number | null>(null);
+
   const handleSkip = (seconds: number) => {
     const next = Math.max(0, Math.min(duration, currentTime + seconds));
     onSeek(next);
   };
+
+  // Helper for touch & mouse seeking on the simple YouTube scrubber
+  const calculateScrubberTime = (clientX: number) => {
+    if (!scrubberRef.current || duration <= 0) return 0;
+    const rect = scrubberRef.current.getBoundingClientRect();
+    const offsetX = clientX - rect.left;
+    const ratio = Math.max(0, Math.min(1, offsetX / rect.width));
+    return ratio * duration;
+  };
+
+  const handleScrubberMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsScrubbing(true);
+    const t = calculateScrubberTime(e.clientX);
+    setScrubTime(t);
+    onSeek(t);
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const moveT = calculateScrubberTime(moveEvent.clientX);
+      setScrubTime(moveT);
+      onSeek(moveT);
+    };
+
+    const onMouseUp = () => {
+      setIsScrubbing(false);
+      setScrubTime(null);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
+
+  const handleScrubberTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 0) return;
+    setIsScrubbing(true);
+    const t = calculateScrubberTime(e.touches[0].clientX);
+    setScrubTime(t);
+    onSeek(t);
+
+    const onTouchMove = (moveEvent: TouchEvent) => {
+      if (moveEvent.touches.length > 0) {
+        const moveT = calculateScrubberTime(moveEvent.touches[0].clientX);
+        setScrubTime(moveT);
+        onSeek(moveT);
+      }
+    };
+
+    const onTouchEnd = () => {
+      setIsScrubbing(false);
+      setScrubTime(null);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
+    };
+
+    window.addEventListener('touchmove', onTouchMove);
+    window.addEventListener('touchend', onTouchEnd);
+  };
+
+  // --- 3. 手機模式下：模仿 YouTube 設計，只留撥放聲音及時間，還有簡易的時間軸 ---
+  if (isMobile) {
+    const showHours = duration >= 3600;
+    const displayTime = isScrubbing && scrubTime !== null ? scrubTime : currentTime;
+    const progressPercent = duration > 0 ? Math.min(100, Math.max(0, (displayTime / duration) * 100)) : 0;
+
+    return (
+      <div className="w-full bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl px-3.5 py-2 flex flex-col gap-1.5 z-30 select-none">
+        {/* 簡易的時間軸 (YouTube-style minimal scrubber) */}
+        <div
+          ref={scrubberRef}
+          onMouseDown={handleScrubberMouseDown}
+          onTouchStart={handleScrubberTouchStart}
+          className="relative w-full h-4 flex items-center cursor-pointer group touch-none"
+          title="滑動或點選時間軸以跳轉"
+        >
+          {/* Track background */}
+          <div className="w-full h-1 group-hover:h-1.5 bg-slate-800 rounded-full overflow-hidden transition-all relative">
+            {/* Red Progress Fill (YouTube Red) */}
+            <div
+              className="h-full bg-red-600 rounded-full transition-all"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+
+          {/* Scrubber Thumb Knob */}
+          <div
+            className="absolute w-3.5 h-3.5 bg-red-600 rounded-full shadow-md -translate-x-1/2 pointer-events-none transition-transform group-hover:scale-125 group-active:scale-125 ring-2 ring-white/20"
+            style={{ left: `${progressPercent}%` }}
+          />
+        </div>
+
+        {/* Controls Row: Play/Pause, Sound Toggle (撥放聲音), Time Display */}
+        <div className="flex items-center justify-between px-0.5">
+          {/* Left: Play/Pause & Sound Button */}
+          <div className="flex items-center gap-2.5">
+            {/* Play/Pause */}
+            <button
+              onClick={onPlayPause}
+              className="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center transition-all shadow-md shadow-blue-600/30 active:scale-95"
+              title={isPlaying ? '暫停 (點擊切換)' : '播放 (點擊切換)'}
+            >
+              {isPlaying ? (
+                <Pause className="w-4 h-4 fill-current" />
+              ) : (
+                <Play className="w-4 h-4 fill-current ml-0.5" />
+              )}
+            </button>
+
+            {/* 撥放聲音 (Mute/Unmute audio button) */}
+            <button
+              onClick={onToggleMute}
+              className={`p-1.5 rounded-lg transition-colors active:scale-95 flex items-center justify-center ${
+                isMuted || volume === 0
+                  ? 'text-rose-400 bg-rose-500/10'
+                  : 'text-slate-200 hover:text-white bg-slate-800/80 hover:bg-slate-700'
+              }`}
+              title={isMuted ? '取消靜音 (目前：靜音)' : '靜音 (目前：播放聲音)'}
+            >
+              {isMuted || volume === 0 ? (
+                <VolumeX className="w-4 h-4 text-rose-400" />
+              ) : (
+                <Volume2 className="w-4 h-4 text-slate-200" />
+              )}
+            </button>
+          </div>
+
+          {/* Right: 時間 (Time Display) */}
+          <div className="font-mono text-xs text-slate-300 flex items-center gap-1 font-semibold bg-slate-950/60 px-2.5 py-1 rounded-lg border border-slate-800/80">
+            <span className="text-white">{formatTime(displayTime, showHours)}</span>
+            <span className="text-slate-500">/</span>
+            <span className="text-slate-400">{formatTime(duration, showHours)}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl px-4 md:px-6 py-2.5 flex items-center gap-3 md:gap-5 z-30 select-none">
