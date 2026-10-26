@@ -690,6 +690,8 @@ export default function App() {
               }
             }}
             onPlayPause={handlePlayPause}
+            onSeek={handleSeek}
+            onToggleMute={() => setIsMuted(!isMuted)}
             isMaximized={activeMaximizedPanel === 'video'}
             onToggleMaximize={() => toggleMaximizePanel('video')}
             onClose={() => handleClosePanel('video')}
@@ -815,30 +817,32 @@ export default function App() {
         )}
       </main>
 
-      {/* 3. Bottom Master Playback Bar (Minimal YouTube-style when in mobile mode) */}
-      <footer className="w-full px-2 sm:px-4 pb-2 sm:pb-3 pt-1 flex-shrink-0">
-        <PlayerBar
-          isPlaying={isPlaying}
-          currentTime={currentTime}
-          duration={duration}
-          playbackRate={playbackRate}
-          volume={volume}
-          isMuted={isMuted}
-          isLooping={isLooping}
-          onToggleLoop={() => setIsLooping((prev) => !prev)}
-          slides={slides}
-          subtitles={subtitles}
-          mediaUrl={mediaUrl}
-          timeRange={timeRange}
-          onUpdateTimeRange={setTimeRange}
-          onPlayPause={handlePlayPause}
-          onSeek={handleSeek}
-          onChangePlaybackRate={setPlaybackRate}
-          onChangeVolume={setVolume}
-          onToggleMute={() => setIsMuted(!isMuted)}
-          isMobile={isMobileMode}
-        />
-      </footer>
+      {/* 3. Bottom Master Playback Bar (Hidden in mobile mode when playing YouTube or Video, since they have their own in-pane controls) */}
+      {(!isMobileMode || mediaType === 'audio') && (
+        <footer className="w-full px-2 sm:px-4 pb-2 sm:pb-3 pt-1 flex-shrink-0">
+          <PlayerBar
+            isPlaying={isPlaying}
+            currentTime={currentTime}
+            duration={duration}
+            playbackRate={playbackRate}
+            volume={volume}
+            isMuted={isMuted}
+            isLooping={isLooping}
+            onToggleLoop={() => setIsLooping((prev) => !prev)}
+            slides={slides}
+            subtitles={subtitles}
+            mediaUrl={mediaUrl}
+            timeRange={timeRange}
+            onUpdateTimeRange={setTimeRange}
+            onPlayPause={handlePlayPause}
+            onSeek={handleSeek}
+            onChangePlaybackRate={setPlaybackRate}
+            onChangeVolume={setVolume}
+            onToggleMute={() => setIsMuted(!isMuted)}
+            isMobile={isMobileMode}
+          />
+        </footer>
+      )}
 
       {/* 4. LM Studio Modal */}
       <LMStudioModal
