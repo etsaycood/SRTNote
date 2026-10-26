@@ -6,12 +6,13 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?logo=tailwind-css&logoColor=white)
+![Version](https://img.shields.io/badge/Version-v1.1.0-blue?logo=github)
 ![LM Studio](https://img.shields.io/badge/LM%20Studio-Local%20AI-blueviolet)
 ![License](https://img.shields.io/badge/License-MIT-green)
 [![Deploy to GitHub Pages](https://github.com/etsaycood/SRTNote/actions/workflows/deploy.yml/badge.svg)](https://github.com/etsaycood/SRTNote/actions/workflows/deploy.yml)
 
 **打破視訊、簡報、逐字稿與 AI 筆記邊界的新一代沉浸式學習工作台**  
-純前端本地運行・零資料上雲・原生中文斷詞優化・毫秒級多維時間同步
+純前端本地運行・零資料上雲・原生中文斷詞優化・毫秒級多維時間同步・手機平板完美適配
 
 🔗 **線上展示網址**：[**https://etsaycood.github.io/SRTNote/**](https://etsaycood.github.io/SRTNote/)
 
@@ -68,9 +69,26 @@
 - **GPU Framebuffer 最佳化**：解耦 Canvas 尺寸與播放繪圖，徹底消除 GPU 顯存重置抖動。
 - **80ms 串流節流緩衝**：確保 AI 即時輸出時 UI 主執行緒保持 60fps 順暢。
 
-### 5. 📺 YouTube 影片連結載入與智慧逐字稿貼上
-- **貼上 YouTube 網址即刻同步**：支援任意 YouTube 影片連結（含短網址 `youtu.be` 與代碼），無縫整合 YouTube Iframe Player API，提供雙向時間軸跳轉與毫秒級播放控制。
-- **智慧逐字稿貼上解析器**：內建剪貼簿解析彈窗，支援一秒貼上從 YouTube 複製之逐字稿文字（如 `0:00 標題 \n 0:15 內容`）、行內時間戳與標準 SRT，自動辨識句子與起訖秒數。
+### 5. 📱 手機與平板專屬沉浸模式 (Mobile Workspace Grid)
+- **智慧裝置自動偵測**：自動感測行動裝置（UserAgent、Touch Points、窄螢幕 `<= 820px`），亦可隨時點擊頂部「手機模式」手動切換。
+- **直立上下分欄**：手機直立時採用上下雙窗格（預設上方影音、下方即時逐字稿），兼顧影片觀看與筆記閱讀。
+- **左右滑動切換分頁**：同一個窗格開啟多個面板時，支援左右滑動切換標籤分頁，維持手機畫面的簡潔流暢。
+- **YouTube 式浮動控制器**：影片面板內建輕量控制列與進度軸，播放時數秒後自動淡出隱藏；手機模式下自動隱藏底層 Master 播放列，釋放最大螢幕範圍。
+
+### 6. 📺 YouTube 多影片批次解析、瀏覽器歷史庫與播放清單輪播
+- **批次連結解析**：支援一次貼入多組 YouTube 網址或混雜文字，正則自動擷取所有有效的 11 碼影片 ID。
+- **獨立本機影片庫**：所有觀看過的 YouTube 影片自動記錄於瀏覽器 LocalStorage，避免設定檔過大。
+- **自訂排序與過濾**：影片清單支援「拖曳把手（Drag & Drop）」或「▲ / ▼ 按鈕」自訂排序，並提供即時 ID 搜尋過濾。
+- **播放清單輪播與循環模式**：自由勾選多部影片加入播放清單，支援「關閉」、「單曲循環」與「全部循環」三段式切換。
+- **高可靠結尾偵測跳轉**：加入 120ms 高頻輪詢雙重保險門檻（結尾前 0.45 秒判定）與 React 狀態保護，解決 YouTube 結尾推薦卡片阻斷 `ENDED` 事件的通病，100% 穩定接續自動播放下一部。
+
+### 7. 📑 影片專屬逐字稿與簡報獨立綁定 (Per-Video Media Mapping)
+- **多影片獨立對應**：每部 YouTube 影片皆可獨立擁有專屬的 SRT 逐字稿與 PDF/圖片簡報（`subtitlesByMedia`、`slidesByMedia`）。
+- **切換影片自動記憶還原**：影片輪播或手動切換時，自動載入該影片的專屬資料；未上傳時明確呈現提示，影片庫亦直觀標示 `SRT (N)` 與 `簡報 (N)`。
+
+### 8. ⛓️‍💥 簡報暫停同步與自由翻頁閱讀 (Slide Sync Pause Mode)
+- **簡報懸浮控制器切換**：簡報底部懸浮導覽列新增 `[ 🔗 同步中 ]` / `[ ⛓️‍💥 暫停同步 ]` 切換按鈕。
+- **自由翻閱不被強制拉回**：暫停同步時可自由點選「上一頁/下一頁」仔細研讀投影片或筆記，影音播放時不會強制跳回目前秒數；隨時點擊即可重新與影音進度同步。
 
 ---
 

@@ -461,7 +461,7 @@ export default function App() {
     setIsSaving(true);
     const activeYtId = mediaType === 'youtube' && mediaUrl ? extractYouTubeId(mediaUrl) : null;
     const config: ProjectConfig = {
-      version: '1.0.0',
+      version: '1.1.0',
       title: projectTitle,
       mediaType,
       youtubeUrl: mediaType === 'youtube' ? mediaUrl : undefined,
