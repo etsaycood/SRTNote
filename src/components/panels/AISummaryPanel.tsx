@@ -6,7 +6,6 @@ import { formatTime, parseTimeToSeconds } from '../../utils/timeFormatter';
 import {
   Sparkles,
   Wand2,
-  Settings2,
   Copy,
   Check,
   Download,
@@ -23,7 +22,10 @@ import {
   Square,
   X,
   GripVertical,
-  Play
+  Play,
+  SlidersHorizontal,
+  ChevronDown,
+  Settings
 } from 'lucide-react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -65,6 +67,7 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
   const [statusText, setStatusText] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showToolsMenu, setShowToolsMenu] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -297,9 +300,9 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
   return (
     <div className="relative w-full h-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col group shadow-lg">
       {/* Header Bar */}
-      <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 backdrop-blur-md flex items-center justify-between gap-3">
-        {/* Title */}
-        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
+      <div className="px-4 py-2.5 border-b border-slate-800 bg-slate-950/80 backdrop-blur-md flex items-center gap-2.5 opacity-0 group-hover:opacity-100 transition-all duration-300 flex-wrap">
+        {/* Title (版面說明) */}
+        <div className="flex items-center gap-2 flex-shrink-0">
           <span title="拖曳以調換位置" className="cursor-grab active:cursor-grabbing flex items-center">
             <GripVertical className="w-3.5 h-3.5 text-slate-500 hover:text-slate-300" />
           </span>
@@ -307,73 +310,34 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
             <Sparkles className="w-3.5 h-3.5" />
           </div>
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-            重點整理 (AI Smart Summary)
+            重點整理
           </h3>
         </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300">
-          {/* Scenario Selector Dropdown */}
-          <select
-            value={lmConfig.presetId || 'business'}
-            onChange={(e) => handleScenarioChange(e.target.value)}
-            className="bg-slate-800 hover:bg-slate-750 border border-slate-700/80 hover:border-purple-500/60 rounded-xl px-2.5 py-1.5 text-xs text-purple-200 focus:outline-none focus:border-purple-500 cursor-pointer transition-colors font-medium shadow-sm"
-            title="切換分析情境提示詞範本"
-          >
-            {PROMPT_PRESETS.map((p) => (
-              <option key={p.id} value={p.id} className="bg-slate-900 text-white">
-                {p.icon} {p.name}
-              </option>
-            ))}
-          </select>
-
-          {/* Main Generate / Stop Button */}
+        {/* Action Controls (Placed directly next to title) */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Main AI Generate / Stop Button */}
           {isGenerating ? (
             <button
               onClick={handleStopGeneration}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-600/30 transition-all active:scale-95 animate-pulse"
-              title="停止 AI 生成 (保留目前產出內容)"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-600/30 transition-all active:scale-95 animate-pulse"
+              title="停止 AI 生成"
             >
               <Square className="w-3.5 h-3.5 fill-current" />
-              <span>停止生成</span>
+              <span>停止</span>
             </button>
           ) : (
             <button
               onClick={handleGenerateAI}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-md active:scale-95 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-600/25"
-              title="呼叫 AI API 執行深度重點整理"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all shadow-md active:scale-95 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-600/25"
+              title={timeRange.enabled ? '呼叫 AI 產生區間重點整理' : '呼叫 AI 產生全片重點整理'}
             >
               <Wand2 className="w-3.5 h-3.5" />
-              <span>
-                {timeRange.enabled ? '產生區間整理' : '產生重點整理'}
-              </span>
+              <span>AI</span>
             </button>
           )}
 
-          {/* Toggle Edit Mode */}
-          <button
-            onClick={() => setIsEditing(!isEditing)}
-            className={`px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 transition-colors ${
-              isEditing
-                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
-                : 'bg-slate-800 text-slate-300 hover:text-white'
-            }`}
-            title="手動編輯摘要內容"
-          >
-            <Edit3 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{isEditing ? '預覽' : '編輯'}</span>
-          </button>
-
-          {/* API Config */}
-          <button
-            onClick={onOpenLMConfig}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-purple-400 hover:bg-slate-800 transition-colors"
-            title="AI API 連線設定與模型偵測"
-          >
-            <Settings2 className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Copy */}
+          {/* Copy Button */}
           <button
             onClick={handleCopy}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
@@ -382,23 +346,97 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
 
-          {/* Download */}
-          <button
-            onClick={handleDownload}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-            title="下載為 Markdown 筆記"
-          >
-            <Download className="w-3.5 h-3.5" />
-          </button>
+          {/* Consolidated Small Options Button: 提示範本、編輯、下載、上傳 */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowToolsMenu(!showToolsMenu)}
+              className={`p-1.5 rounded-lg text-xs font-medium flex items-center gap-0.5 transition-colors ${
+                showToolsMenu
+                  ? 'bg-purple-600/30 text-purple-300 border border-purple-500/40'
+                  : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700'
+              }`}
+              title="更多工具：提示範本、手動編輯、匯出與匯入筆記"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <ChevronDown className="w-3 h-3 text-slate-400" />
+            </button>
 
-          {/* Upload Markdown */}
-          <label
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer transition-colors"
-            title="上傳自訂 Markdown 筆記"
-          >
-            <Upload className="w-3.5 h-3.5" />
-            <input type="file" accept=".md,.txt" onChange={handleUploadMarkdown} className="hidden" />
-          </label>
+            {showToolsMenu && (
+              <div
+                className="absolute left-0 top-full mt-2 w-56 bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl p-2 z-50 animate-fade-in text-xs"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* 1. 提示範本選擇 */}
+                <div className="px-2 py-1 text-[11px] font-semibold text-slate-400">提示範本</div>
+                <div className="space-y-0.5 mb-1.5">
+                  {PROMPT_PRESETS.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        handleScenarioChange(p.id);
+                        setShowToolsMenu(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-colors text-left ${
+                        (lmConfig.presetId || 'business') === p.id
+                          ? 'bg-purple-600/20 text-purple-300 font-semibold'
+                          : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                      }`}
+                    >
+                      <span>{p.icon} {p.name}</span>
+                      {(lmConfig.presetId || 'business') === p.id && <Check className="w-3 h-3 text-purple-400" />}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="h-px bg-slate-800 my-1" />
+
+                {/* 2. 編輯模式 */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditing(!isEditing);
+                    setShowToolsMenu(false);
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-colors text-left"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-blue-400" />
+                  <span>{isEditing ? '切換為預覽' : '手動編輯筆記'}</span>
+                </button>
+
+                {/* 3. 下載 */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleDownload();
+                    setShowToolsMenu(false);
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-colors text-left"
+                >
+                  <Download className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>下載 Markdown 筆記 (.md)</span>
+                </button>
+
+                {/* 4. 上傳 */}
+                <label
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer transition-colors"
+                >
+                  <Upload className="w-3.5 h-3.5 text-amber-400" />
+                  <span>上傳 Markdown 筆記 (.md/.txt)</span>
+                  <input
+                    type="file"
+                    accept=".md,.txt"
+                    onChange={(e) => {
+                      handleUploadMarkdown(e);
+                      setShowToolsMenu(false);
+                    }}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            )}
+          </div>
 
           <button
             onClick={onToggleMaximize}
@@ -615,7 +653,7 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
               onClick={onOpenLMConfig}
               className="flex items-center gap-1.5 px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg shadow-sm transition-colors text-xs"
             >
-              <Settings2 className="w-3.5 h-3.5" />
+              <Settings className="w-3.5 h-3.5" />
               檢查 API 設定
             </button>
           </div>
@@ -703,7 +741,7 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
                     disabled={isGenerating}
                     className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium border border-slate-700/80 transition-all"
                   >
-                    <Settings2 className="w-4 h-4 text-purple-400" />
+                    <Settings className="w-4 h-4 text-purple-400" />
                     API 連線設定
                   </button>
                 </div>

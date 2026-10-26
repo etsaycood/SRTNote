@@ -49,6 +49,7 @@ export default function App() {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
+  const [isLooping, setIsLooping] = useState(false);
 
   // --- Selected A-B Time Range State ---
   const [timeRange, setTimeRange] = useState<TimeRange>({
@@ -146,7 +147,14 @@ export default function App() {
         }
       };
       const onTime = () => setCurrentTime(audio.currentTime);
-      const onEnd = () => setIsPlaying(false);
+      const onEnd = () => {
+        if (isLooping) {
+          audio.currentTime = 0;
+          audio.play().catch(() => setIsPlaying(false));
+        } else {
+          setIsPlaying(false);
+        }
+      };
 
       audio.addEventListener('loadedmetadata', onLoadedMeta);
       audio.addEventListener('timeupdate', onTime);
@@ -159,7 +167,7 @@ export default function App() {
         audio.removeEventListener('ended', onEnd);
       };
     }
-  }, [mediaUrl, mediaType]);
+  }, [mediaUrl, mediaType, isLooping]);
 
   // Sync Audio Playback
   useEffect(() => {
@@ -185,6 +193,9 @@ export default function App() {
         setCurrentTime((prev) => {
           const next = prev + (stepMs / 1000) * playbackRate;
           if (next >= duration) {
+            if (isLooping) {
+              return 0;
+            }
             setIsPlaying(false);
             return duration;
           }
@@ -193,7 +204,7 @@ export default function App() {
       }, stepMs);
     }
     return () => clearInterval(timer);
-  }, [isPlaying, mediaUrl, duration, playbackRate]);
+  }, [isPlaying, mediaUrl, duration, playbackRate, isLooping]);
 
   // --- Play/Pause Toggle ---
   const handlePlayPause = () => {
@@ -607,9 +618,18 @@ export default function App() {
             playbackRate={playbackRate}
             volume={volume}
             isMuted={isMuted}
+            isLooping={isLooping}
+            onToggleLoop={() => setIsLooping((prev) => !prev)}
             onTimeUpdate={(t) => setCurrentTime(t)}
             onDurationChange={handleDurationChange}
-            onEnded={() => setIsPlaying(false)}
+            onEnded={() => {
+              if (isLooping) {
+                handleSeek(timeRange.enabled ? timeRange.start : 0);
+                setIsPlaying(true);
+              } else {
+                setIsPlaying(false);
+              }
+            }}
             onPlayPause={handlePlayPause}
             isMaximized={activeMaximizedPanel === 'video'}
             onToggleMaximize={() => toggleMaximizePanel('video')}
@@ -731,6 +751,8 @@ export default function App() {
           playbackRate={playbackRate}
           volume={volume}
           isMuted={isMuted}
+          isLooping={isLooping}
+          onToggleLoop={() => setIsLooping((prev) => !prev)}
           slides={slides}
           subtitles={subtitles}
           mediaUrl={mediaUrl}

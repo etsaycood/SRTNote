@@ -149,29 +149,29 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
   return (
     <div className="relative w-full h-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col group shadow-lg">
       {/* Header Bar */}
-      <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 backdrop-blur-md flex items-center justify-between gap-3">
-        {/* Title */}
-        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
+      <div className="px-4 py-2.5 border-b border-slate-800 bg-slate-950/80 backdrop-blur-md flex items-center gap-2.5 opacity-0 group-hover:opacity-100 transition-all duration-300 flex-wrap">
+        {/* Title (版面說明) */}
+        <div className="flex items-center gap-2 flex-shrink-0">
           <span title="拖曳以調換位置" className="cursor-grab active:cursor-grabbing flex items-center">
             <GripVertical className="w-3.5 h-3.5 text-slate-500 hover:text-slate-300" />
           </span>
           <FileText className="w-4 h-4 text-blue-400" />
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-            即時逐字稿 (Transcript)
+            即時逐字稿
           </h3>
           <span className="text-[11px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full">
             {subtitles.length} 句
           </span>
         </div>
 
-        {/* Functions & Controls (Hidden until hover) */}
-        <div className="flex-1 flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all duration-300">
+        {/* Functions & Controls (Placed directly next to title) */}
+        <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
           {/* Search Input */}
-          <div className="relative flex-1 max-w-xs">
+          <div className="relative w-44 sm:w-56">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
             <input
               type="text"
-              placeholder="搜尋發言人或內容關鍵字..."
+              placeholder="搜尋逐字稿關鍵字..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-slate-800/80 border border-slate-700/80 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-colors"
@@ -179,10 +179,10 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
           </div>
 
           {/* Action Controls */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
             <button
               onClick={() => setAutoScroll(!autoScroll)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1 transition-colors ${
+              className={`px-2 py-1 rounded-lg text-xs font-medium flex items-center gap-1 transition-colors ${
                 autoScroll
                   ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                   : 'bg-slate-800 text-slate-400 hover:text-white'
@@ -195,7 +195,7 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
 
             <button
               onClick={() => setIsEditMode(!isEditMode)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1 transition-colors ${
+              className={`px-2 py-1 rounded-lg text-xs font-medium flex items-center gap-1 transition-colors ${
                 isEditMode
                   ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
                   : 'bg-slate-800 text-slate-300 hover:text-white'
@@ -203,7 +203,7 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
               title="微調字幕時間與內容"
             >
               {isEditMode ? <Check className="w-3.5 h-3.5" /> : <Edit2 className="w-3.5 h-3.5" />}
-              <span>{isEditMode ? '完成編輯' : '微調校對'}</span>
+              <span>{isEditMode ? '完成' : '校對'}</span>
             </button>
 
             {/* Export / Upload */}

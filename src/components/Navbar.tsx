@@ -18,7 +18,8 @@ import {
   Check,
   Plus,
   X,
-  Clipboard
+  Clipboard,
+  Settings
 } from 'lucide-react';
 import { YoutubeIcon } from './icons/YoutubeIcon';
 
@@ -74,7 +75,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState(projectTitle);
   const [showUploadDropdown, setShowUploadDropdown] = useState(false);
-  const [showLayoutDropdown, setShowLayoutDropdown] = useState(false);
+  const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
 
   const handleTitleSubmit = () => {
     setIsEditingTitle(false);
@@ -89,7 +90,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     video: '影音視窗',
     slides: '同步簡報',
     transcript: '即時逐字稿',
-    summary: 'AI 重點整理'
+    summary: '重點整理'
   };
 
   return (
@@ -101,7 +102,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Sparkles className="w-5 h-5" />
           </div>
           <div>
-            <span className="font-extrabold text-sm tracking-wider text-white">SyncNote</span>
+            <span className="font-extrabold text-sm tracking-wider text-white">SRTNote</span>
           </div>
         </div>
 
@@ -262,145 +263,164 @@ export const Navbar: React.FC<NavbarProps> = ({
           </span>
         </button>
 
-        {/* API 連線設定 */}
-        <button
-          onClick={onOpenLMConfig}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-purple-600/15 hover:bg-purple-600/25 text-purple-300 border border-purple-500/40 shadow-sm transition-all"
-          title="設定 AI API 連線端點、模型與情境提示詞"
-        >
-          <Cpu className="w-3.5 h-3.5 text-purple-400" />
-          <span className="hidden md:inline">API 連線</span>
-        </button>
-
-        {/* Layout & Window Manager */}
+        {/* 統一設定入口 */}
         <div className="relative">
           <button
-            onClick={() => setShowLayoutDropdown(!showLayoutDropdown)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
-              openPanels.length < 4
-                ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 hover:bg-amber-500/25 shadow-sm'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
-            }`}
-            title="管理視窗面板開關、拖曳位置與重設"
+            onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shadow-sm transition-all"
+            title="系統設定（AI 連線、版面視窗、示範專案）"
           >
-            <LayoutGrid className="w-3.5 h-3.5 text-blue-400" />
-            <span>版面視窗</span>
-            <span
-              className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                openPanels.length < 4 ? 'bg-amber-500/30 text-amber-200' : 'bg-slate-700 text-slate-300'
-              }`}
-            >
-              {openPanels.length}/4
-            </span>
+            <Settings className="w-3.5 h-3.5 text-slate-300" />
+            <span>設定</span>
             <ChevronDown className="w-3 h-3 text-slate-400" />
           </button>
 
-          {showLayoutDropdown && (
+          {showSettingsDropdown && (
             <div
-              className="absolute right-0 top-full mt-2 w-72 bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl shadow-2xl p-3 z-50 animate-fade-in text-xs"
+              className="absolute right-0 top-full mt-2 w-80 bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl shadow-2xl p-3 z-50 animate-fade-in text-xs"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                <div>
-                  <div className="font-bold text-white text-xs">版面與視窗管理</div>
-                  <div className="text-[10px] text-slate-400">可自由關閉或隨時加回面板</div>
+                <div className="flex items-center gap-1.5">
+                  <Settings className="w-4 h-4 text-blue-400" />
+                  <span className="font-bold text-white text-xs">系統設定</span>
                 </div>
                 <button
-                  onClick={() => setShowLayoutDropdown(false)}
+                  onClick={() => setShowSettingsDropdown(false)}
                   className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
 
-              {/* Panel List */}
-              <div className="py-2.5 space-y-1.5">
-                {[
-                  { id: 'video' as PanelId, title: '影音視窗 (Video)', icon: Video, color: 'text-blue-400' },
-                  { id: 'slides' as PanelId, title: '同步簡報 (Slides)', icon: Presentation, color: 'text-emerald-400' },
-                  { id: 'transcript' as PanelId, title: '即時逐字稿 (Transcript)', icon: FileText, color: 'text-amber-400' },
-                  { id: 'summary' as PanelId, title: 'AI 重點整理 (AI Summary)', icon: Sparkles, color: 'text-purple-400' }
-                ].map((p) => {
-                  const isOpen = openPanels.includes(p.id);
-                  const Icon = p.icon;
-                  return (
-                    <div
-                      key={p.id}
-                      className={`flex items-center justify-between p-2 rounded-xl border transition-all ${
-                        isOpen
-                          ? 'bg-slate-800/80 border-slate-700/80 text-slate-200'
-                          : 'bg-slate-950/60 border-dashed border-slate-800 text-slate-500'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Icon className={`w-4 h-4 ${isOpen ? p.color : 'text-slate-600'}`} />
-                        <span className={`font-semibold text-xs ${isOpen ? 'text-white' : 'text-slate-400'}`}>
-                          {p.title}
-                        </span>
-                      </div>
-
-                      {isOpen ? (
-                        <button
-                          onClick={() => onTogglePanel(p.id)}
-                          className="px-2 py-1 rounded-lg text-[11px] text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 transition-colors flex items-center gap-1"
-                          title="關閉此面板"
-                        >
-                          <X className="w-3 h-3" />
-                          <span>關閉</span>
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => onTogglePanel(p.id)}
-                          className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30 transition-all flex items-center gap-1 active:scale-95"
-                          title="將此面板加回畫面"
-                        >
-                          <Plus className="w-3 h-3" />
-                          <span>加回面板</span>
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Quick Actions */}
-              <div className="pt-2 border-t border-slate-800 space-y-1.5">
-                {openPanels.length < 4 && (
-                  <button
-                    onClick={() => {
-                      onOpenAllPanels();
-                      setShowLayoutDropdown(false);
-                    }}
-                    className="w-full py-1.5 px-2.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>一鍵開啟全部 4 個面板</span>
-                  </button>
-                )}
-
+              {/* 1. AI API 設定 */}
+              <div className="py-2.5 border-b border-slate-800">
                 <button
                   onClick={() => {
-                    onResetLayout();
-                    setShowLayoutDropdown(false);
+                    onOpenLMConfig();
+                    setShowSettingsDropdown(false);
                   }}
-                  className="w-full py-1.5 px-2.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white text-xs transition-colors flex items-center justify-center gap-1.5"
+                  className="w-full flex items-center justify-between p-2.5 rounded-xl bg-purple-600/10 hover:bg-purple-600/20 border border-purple-500/30 text-purple-200 transition-all text-left group"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>重設為預設四宮格排序與比例</span>
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 rounded-lg bg-purple-600/20 text-purple-400 group-hover:scale-105 transition-transform">
+                      <Cpu className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-white text-xs">AI 連線設定</div>
+                      <div className="text-[10px] text-slate-400">自訂 API 端點、模型與提示詞</div>
+                    </div>
+                  </div>
+                  <ChevronDown className="w-3.5 h-3.5 -rotate-90 text-purple-400" />
+                </button>
+              </div>
+
+              {/* 2. 版面視窗管理 */}
+              <div className="py-2.5 border-b border-slate-800">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-semibold text-slate-300 flex items-center gap-1.5 text-xs">
+                    <LayoutGrid className="w-3.5 h-3.5 text-blue-400" />
+                    版面視窗開關
+                  </span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400">
+                    {openPanels.length}/4 開啟
+                  </span>
+                </div>
+
+                <div className="space-y-1.5">
+                  {[
+                    { id: 'video' as PanelId, title: '影音視窗', icon: Video, color: 'text-blue-400' },
+                    { id: 'slides' as PanelId, title: '同步簡報', icon: Presentation, color: 'text-emerald-400' },
+                    { id: 'transcript' as PanelId, title: '即時逐字稿', icon: FileText, color: 'text-amber-400' },
+                    { id: 'summary' as PanelId, title: '重點整理', icon: Sparkles, color: 'text-purple-400' }
+                  ].map((p) => {
+                    const isOpen = openPanels.includes(p.id);
+                    const Icon = p.icon;
+                    return (
+                      <div
+                        key={p.id}
+                        className={`flex items-center justify-between p-2 rounded-xl border transition-all ${
+                          isOpen
+                            ? 'bg-slate-800/80 border-slate-700/80 text-slate-200'
+                            : 'bg-slate-950/60 border-dashed border-slate-800 text-slate-500'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Icon className={`w-3.5 h-3.5 ${isOpen ? p.color : 'text-slate-600'}`} />
+                          <span className={`font-medium text-xs ${isOpen ? 'text-white' : 'text-slate-400'}`}>
+                            {p.title}
+                          </span>
+                        </div>
+
+                        {isOpen ? (
+                          <button
+                            onClick={() => onTogglePanel(p.id)}
+                            className="px-2 py-0.5 rounded-lg text-[11px] text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 transition-colors flex items-center gap-1"
+                            title="關閉此面板"
+                          >
+                            <X className="w-3 h-3" />
+                            <span>關閉</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => onTogglePanel(p.id)}
+                            className="px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30 transition-all flex items-center gap-1 active:scale-95"
+                            title="將此面板加回畫面"
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span>加回</span>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="pt-2 flex flex-col gap-1.5">
+                  {openPanels.length < 4 && (
+                    <button
+                      onClick={() => {
+                        onOpenAllPanels();
+                      }}
+                      className="w-full py-1.5 px-2.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>一鍵開啟全部 4 個面板</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      onResetLayout();
+                      setShowSettingsDropdown(false);
+                    }}
+                    className="w-full py-1.5 px-2.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white text-xs transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>重設為預設四宮格排序與比例</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 3. 示範專案 */}
+              <div className="pt-2">
+                <button
+                  onClick={() => {
+                    onLoadDemoProject();
+                    setShowSettingsDropdown(false);
+                  }}
+                  className="w-full py-2 px-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white text-xs transition-colors flex items-center justify-between"
+                  title="載入示範專案"
+                >
+                  <span className="flex items-center gap-2">
+                    <RotateCcw className="w-3.5 h-3.5 text-blue-400" />
+                    <span>載入示範專案</span>
+                  </span>
+                  <span className="text-[10px] text-slate-500">重置至預設範例</span>
                 </button>
               </div>
             </div>
           )}
         </div>
-
-        {/* Load Demo */}
-        <button
-          onClick={onLoadDemoProject}
-          className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-          title="載入示範專案"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-        </button>
       </div>
     </header>
   );

@@ -66,15 +66,15 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
 
   return (
     <div className="relative w-full h-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col group shadow-lg">
-      {/* Top Header Badge & Controls */}
-      <div className="absolute top-3 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
-        <div className="flex items-center gap-2 bg-slate-950/80 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700/60 shadow-md pointer-events-auto opacity-0 group-hover:opacity-100 transition-all duration-300">
+      {/* Top Header Badge & Controls (Grouped together next to title) */}
+      <div className="absolute top-3 left-4 z-20 flex items-center gap-2 pointer-events-auto opacity-0 group-hover:opacity-100 transition-all duration-300 flex-wrap">
+        <div className="flex items-center gap-2 bg-slate-950/85 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700/60 shadow-md">
           <span title="拖曳以調換位置" className="cursor-grab active:cursor-grabbing flex items-center">
             <GripVertical className="w-3.5 h-3.5 text-slate-500 hover:text-slate-300" />
           </span>
           <Presentation className="w-3.5 h-3.5 text-blue-400" />
           <span className="text-xs font-bold tracking-wider text-slate-200">
-            同步簡報 (Slides)
+            同步簡報
           </span>
           {hasSlides && (
             <span className="text-[11px] font-mono text-blue-300/80 bg-blue-950/60 px-2 py-0.5 rounded-full border border-blue-800/40">
@@ -83,8 +83,8 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
           )}
         </div>
 
-        {/* Panel Action Buttons */}
-        <div className="flex items-center gap-1.5 bg-slate-950/80 backdrop-blur-md p-1 rounded-xl border border-slate-700/60 shadow-md pointer-events-auto opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* Panel Action Buttons: Positioned directly next to title */}
+        <div className="flex items-center gap-1.5 bg-slate-950/85 backdrop-blur-md p-1 rounded-xl border border-slate-700/60 shadow-md">
           <button
             onClick={onOpenTimelineModal}
             className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-blue-300 hover:text-white hover:bg-blue-600/30 transition-colors"

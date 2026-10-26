@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { MediaType } from '../../types';
 import { extractYouTubeId, loadYouTubeIframeAPI } from '../../utils/youtubeHelper';
-import { Video, Mic, Maximize2, Minimize2, X, Upload, GripVertical, Link as LinkIcon } from 'lucide-react';
+import { Video, Mic, Maximize2, Minimize2, X, Upload, GripVertical, Link as LinkIcon, Repeat } from 'lucide-react';
 import { YoutubeIcon } from '../icons/YoutubeIcon';
 
 interface VideoPanelProps {
@@ -13,6 +13,8 @@ interface VideoPanelProps {
   playbackRate?: number;
   volume?: number;
   isMuted?: boolean;
+  isLooping?: boolean;
+  onToggleLoop?: () => void;
   onTimeUpdate: (time: number) => void;
   onDurationChange?: (duration: number) => void;
   onEnded: () => void;
@@ -35,6 +37,8 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
   playbackRate = 1,
   volume = 1,
   isMuted = false,
+  isLooping = false,
+  onToggleLoop,
   onTimeUpdate,
   onDurationChange,
   onEnded,
@@ -113,6 +117,12 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
             } else if (event.data === 2 && isPlaying) {
               onPlayPause();
             } else if (event.data === 0) {
+              if (isLooping) {
+                try {
+                  event.target.seekTo(0, true);
+                  event.target.playVideo();
+                } catch (e) {}
+              }
               onEnded();
             }
           },
@@ -288,9 +298,9 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
 
   return (
     <div className="relative w-full h-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col group shadow-lg">
-      {/* Top Header Badge & Controls */}
-      <div className="absolute top-3 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
-        <div className="flex items-center gap-2 bg-slate-950/80 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700/60 shadow-md pointer-events-auto opacity-0 group-hover:opacity-100 transition-all duration-300">
+      {/* Top Header Badge & Controls (Grouped together next to title) */}
+      <div className="absolute top-3 left-4 z-20 flex items-center gap-2 pointer-events-auto opacity-0 group-hover:opacity-100 transition-all duration-300 flex-wrap">
+        <div className="flex items-center gap-2 bg-slate-950/85 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700/60 shadow-md">
           <span title="拖曳以調換位置" className="cursor-grab active:cursor-grabbing flex items-center">
             <GripVertical className="w-3.5 h-3.5 text-slate-500 hover:text-slate-300" />
           </span>
@@ -305,8 +315,8 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
             {mediaType === 'youtube'
               ? 'YouTube 影音'
               : mediaType === 'video' && mediaUrl
-              ? '視訊畫面 (Video)'
-              : '即時語音頻譜 (Audio Studio)'}
+              ? '視訊畫面'
+              : '語音頻譜'}
           </span>
           {isPlaying && (
             <span className="flex h-2 w-2 relative">
@@ -316,16 +326,33 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
           )}
         </div>
 
-        {/* Panel Action Buttons */}
-        <div className="flex items-center gap-1.5 bg-slate-950/80 backdrop-blur-md p-1 rounded-xl border border-slate-700/60 shadow-md pointer-events-auto opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* Panel Action Buttons: Positioned directly next to title */}
+        <div className="flex items-center gap-1.5 bg-slate-950/85 backdrop-blur-md p-1 rounded-xl border border-slate-700/60 shadow-md">
+          {/* Repeat / Loop Playback Button */}
+          {onToggleLoop && (
+            <button
+              onClick={onToggleLoop}
+              className={`p-1.5 rounded-lg transition-colors flex items-center gap-1 ${
+                isLooping
+                  ? 'bg-blue-600/30 text-blue-400 border border-blue-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+              title={isLooping ? '重複播放：已開啟 (單曲循環)' : '重複播放：未開啟 (點擊開啟循環)'}
+            >
+              <Repeat className="w-3.5 h-3.5" />
+              <span className="text-[11px] font-medium hidden sm:inline">{isLooping ? '循環中' : '重複播放'}</span>
+            </button>
+          )}
+
           {/* YouTube Link Button */}
           {onOpenYouTubeModal && (
             <button
               onClick={onOpenYouTubeModal}
-              className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/15 transition-colors"
+              className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/15 transition-colors flex items-center gap-1"
               title="貼上 YouTube 影片網址"
             >
               <YoutubeIcon className="w-3.5 h-3.5" />
+              <span className="text-[11px] font-medium hidden sm:inline">YouTube</span>
             </button>
           )}
 
@@ -390,6 +417,7 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
               }
             }}
             onEnded={onEnded}
+            loop={isLooping}
             playsInline
           />
         ) : (

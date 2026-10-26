@@ -8,7 +8,8 @@ import {
   RotateCcw,
   RotateCw,
   Volume2,
-  VolumeX
+  VolumeX,
+  Repeat
 } from 'lucide-react';
 
 interface PlayerBarProps {
@@ -18,6 +19,8 @@ interface PlayerBarProps {
   playbackRate: number;
   volume: number;
   isMuted: boolean;
+  isLooping?: boolean;
+  onToggleLoop?: () => void;
   slides: SlideItem[];
   subtitles?: SubtitleItem[];
   mediaUrl?: string;
@@ -37,6 +40,8 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
   playbackRate,
   volume,
   isMuted,
+  isLooping = false,
+  onToggleLoop,
   slides,
   subtitles = [],
   mediaUrl,
@@ -68,7 +73,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         )}
       </button>
 
-      {/* Skip -5s / +5s */}
+      {/* Skip -5s / +5s & Repeat */}
       <div className="hidden sm:flex items-center gap-1 text-slate-400">
         <button
           onClick={() => handleSkip(-5)}
@@ -84,6 +89,19 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         >
           <RotateCw className="w-4 h-4" />
         </button>
+        {onToggleLoop && (
+          <button
+            onClick={onToggleLoop}
+            className={`p-1.5 rounded-lg transition-colors flex items-center gap-1 ${
+              isLooping
+                ? 'bg-blue-600/25 text-blue-400 border border-blue-500/40 shadow-sm'
+                : 'hover:text-white hover:bg-slate-800'
+            }`}
+            title={isLooping ? '關閉重複播放 (已開啟循環)' : '開啟重複播放 (單曲循環)'}
+          >
+            <Repeat className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* Dedicated High-Fidelity Audio Waveform Canvas */}
