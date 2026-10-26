@@ -22,6 +22,7 @@ import { AISummaryPanel } from './components/panels/AISummaryPanel';
 import { LMStudioModal } from './components/LMStudioModal';
 import { SlideTimelineModal } from './components/SlideTimelineModal';
 import { YouTubeModal } from './components/YouTubeModal';
+import { extractYouTubeId } from './utils/youtubeHelper';
 import { PasteTranscriptModal } from './components/PasteTranscriptModal';
 
 // Helper to detect non-PC devices (mobile phones or tablets)
@@ -868,6 +869,7 @@ export default function App() {
         isOpen={isYouTubeModalOpen}
         onClose={() => setIsYouTubeModalOpen(false)}
         onLoadYouTube={handleLoadYouTube}
+        currentVideoId={mediaType === 'youtube' && mediaUrl ? extractYouTubeId(mediaUrl) || undefined : undefined}
       />
 
       {/* 7. Paste Transcript Modal */}

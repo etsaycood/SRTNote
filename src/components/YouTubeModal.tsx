@@ -1,139 +1,356 @@
-import React, { useState } from 'react';
-import { extractYouTubeId } from '../utils/youtubeHelper';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  extractYouTubeId,
+  extractMultipleYouTubeVideos,
+  getStoredYouTubeLibrary,
+  saveMultipleYouTubeToLibrary,
+  removeYouTubeFromLibrary,
+  clearYouTubeLibrary
+} from '../utils/youtubeHelper';
+import { YouTubeHistoryItem } from '../types';
 import { YoutubeIcon } from './icons/YoutubeIcon';
-import { X, Play, AlertCircle, CheckCircle2 } from 'lucide-react';
+import {
+  X,
+  Play,
+  Plus,
+  Trash2,
+  AlertCircle,
+  CheckCircle2,
+  ListVideo,
+  Search,
+  ExternalLink
+} from 'lucide-react';
 
 interface YouTubeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onLoadYouTube: (url: string, videoId: string) => void;
+  currentVideoId?: string;
 }
 
 export const YouTubeModal: React.FC<YouTubeModalProps> = ({
   isOpen,
   onClose,
-  onLoadYouTube
+  onLoadYouTube,
+  currentVideoId
 }) => {
-  const [inputUrl, setInputUrl] = useState('');
+  const [inputText, setInputText] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [library, setLibrary] = useState<YouTubeHistoryItem[]>([]);
+  const [searchFilter, setSearchFilter] = useState('');
+
+  // Reload stored library whenever modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setLibrary(getStoredYouTubeLibrary());
+      setErrorMsg('');
+      setInputText('');
+      setSearchFilter('');
+    }
+  }, [isOpen]);
+
+  // Parse all valid YouTube links from input text
+  const detectedVideos = useMemo(() => {
+    return extractMultipleYouTubeVideos(inputText);
+  }, [inputText]);
 
   if (!isOpen) return null;
 
-  const detectedId = extractYouTubeId(inputUrl);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Handler: Load first video & save all entered links to library
+  const handleLoadAndSave = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setErrorMsg('');
 
-    if (!inputUrl.trim()) {
-      setErrorMsg('請輸入 YouTube 影片網址或 ID');
+    if (detectedVideos.length === 0) {
+      setErrorMsg('未辨識到有效的 YouTube 連結，請確認格式（如 https://www.youtube.com/watch?v=... 或 11 字元 ID）');
       return;
     }
 
-    const videoId = extractYouTubeId(inputUrl);
-    if (!videoId) {
-      setErrorMsg('無法辨識此 YouTube 連結，請確認格式（如 https://www.youtube.com/watch?v=... 或 youtu.be/...）');
-      return;
-    }
+    // Save all to localStorage library
+    const updated = saveMultipleYouTubeToLibrary(detectedVideos);
+    setLibrary(updated);
 
-    onLoadYouTube(inputUrl.trim(), videoId);
-    setInputUrl('');
+    // Load first video into workspace
+    const first = detectedVideos[0];
+    onLoadYouTube(first.url, first.videoId);
+    setInputText('');
     onClose();
   };
 
+  // Handler: Add to library only (without loading)
+  const handleAddOnly = () => {
+    if (detectedVideos.length === 0) {
+      setErrorMsg('請先輸入至少一個有效的 YouTube 連結');
+      return;
+    }
+
+    const updated = saveMultipleYouTubeToLibrary(detectedVideos);
+    setLibrary(updated);
+    setInputText('');
+    setErrorMsg('');
+  };
+
+  // Handler: Play a specific video from library
+  const handlePlayFromLibrary = (item: YouTubeHistoryItem) => {
+    onLoadYouTube(item.url, item.id);
+    onClose();
+  };
+
+  // Handler: Remove a single video from library
+  const handleRemoveItem = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    const updated = removeYouTubeFromLibrary(id);
+    setLibrary(updated);
+  };
+
+  // Handler: Clear all library items
+  const handleClearAll = () => {
+    if (window.confirm('確定要清空所有已存的 YouTube 影片紀錄嗎？')) {
+      clearYouTubeLibrary();
+      setLibrary([]);
+    }
+  };
+
+  // Filter library by search query
+  const filteredLibrary = library.filter((item) => {
+    if (!searchFilter.trim()) return true;
+    const q = searchFilter.toLowerCase();
+    return item.id.toLowerCase().includes(q) || (item.title && item.title.toLowerCase().includes(q));
+  });
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
       <div
-        className="relative w-full max-w-lg bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        className="relative w-full max-w-xl bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+        <div className="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60 flex-shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-red-600/20 text-red-400 flex items-center justify-center border border-red-500/30">
               <YoutubeIcon className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white">載入 YouTube 影片</h3>
-              <p className="text-[11px] text-slate-400">貼上 YouTube 連結直接在工作台中同步播放與筆記</p>
+              <h3 className="text-sm font-bold text-white">YouTube 影片庫與多連結管理</h3>
+              <p className="text-[11px] text-slate-400">支援單筆或多行貼上，記錄儲存於瀏覽器，不增加設定檔大小</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            title="關閉"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Content */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              YouTube 影片網址或 Video ID
-            </label>
-            <div className="relative">
-              <input
-                type="text"
+        {/* Modal Body */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 custom-scrollbar">
+          {/* Upper Section: Input Form (Single or Multi-line batch paste) */}
+          <form onSubmit={handleLoadAndSave} className="space-y-3">
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-semibold text-slate-300">
+                  貼上 YouTube 網址（支援多行批次輸入）
+                </label>
+                {detectedVideos.length > 0 && (
+                  <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/40">
+                    已辨識 {detectedVideos.length} 部影片
+                  </span>
+                )}
+              </div>
+              <textarea
+                rows={3}
                 autoFocus
-                placeholder="例如: https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-                value={inputUrl}
+                placeholder="例如:&#10;https://www.youtube.com/watch?v=dQw4w9WgXcQ&#10;https://youtu.be/kJQP7kiw5Fk&#10;(可一次貼上多行網址或 11 碼 ID)"
+                value={inputText}
                 onChange={(e) => {
-                  setInputUrl(e.target.value);
+                  setInputText(e.target.value);
                   if (errorMsg) setErrorMsg('');
                 }}
-                className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 font-mono transition-colors"
+                className="w-full bg-slate-950 border border-slate-700/80 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 font-mono transition-colors leading-relaxed"
               />
             </div>
-            <p className="text-[11px] text-slate-400 mt-1.5">
-              支援標準網址、短網址 (<code className="text-red-300">youtu.be</code>)、嵌入網址或 11 字元代碼。
-            </p>
-          </div>
 
-          {/* Validation Feedback */}
-          {errorMsg && (
-            <div className="flex items-center gap-2 p-2.5 bg-rose-500/15 border border-rose-500/40 rounded-xl text-rose-300 text-xs">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
-
-          {detectedId && !errorMsg && (
-            <div className="flex items-center justify-between p-3 bg-red-950/30 border border-red-500/30 rounded-xl text-xs animate-fade-in">
-              <div className="flex items-center gap-2 min-w-0">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                <span className="text-slate-300 truncate">
-                  已識別 Video ID: <strong className="text-white font-mono">{detectedId}</strong>
-                </span>
+            {/* Validation / Detection Preview */}
+            {errorMsg && (
+              <div className="flex items-center gap-2 p-2.5 bg-rose-500/15 border border-rose-500/40 rounded-xl text-rose-300 text-xs">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{errorMsg}</span>
               </div>
-              <img
-                src={`https://img.youtube.com/vi/${detectedId}/mqdefault.jpg`}
-                alt="thumbnail"
-                className="w-16 h-9 object-cover rounded-md border border-slate-700/80 flex-shrink-0"
-              />
-            </div>
-          )}
+            )}
 
-          {/* Footer Buttons */}
-          <div className="pt-2 flex items-center justify-end gap-2.5">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
-            >
-              取消
-            </button>
-            <button
-              type="submit"
-              disabled={!inputUrl.trim()}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white shadow-lg shadow-red-600/30 transition-all active:scale-95"
-            >
-              <Play className="w-3.5 h-3.5 fill-current" />
-              <span>載入影片</span>
-            </button>
+            {detectedVideos.length > 0 && (
+              <div className="flex items-center justify-between p-2.5 bg-red-950/25 border border-red-500/30 rounded-xl text-xs">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-slate-200 font-medium truncate">
+                      {detectedVideos.length === 1
+                        ? `即將載入: ${detectedVideos[0].videoId}`
+                        : `共辨識出 ${detectedVideos.length} 部影片，首部為: ${detectedVideos[0].videoId}`}
+                    </p>
+                    <p className="text-[11px] text-slate-400 truncate">
+                      所有辨識到的影片都將自動加入下方瀏覽器歷史清單
+                    </p>
+                  </div>
+                </div>
+                <img
+                  src={`https://img.youtube.com/vi/${detectedVideos[0].videoId}/mqdefault.jpg`}
+                  alt="thumbnail"
+                  className="w-16 h-9 object-cover rounded-md border border-slate-700/80 flex-shrink-0 ml-2"
+                />
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={handleAddOnly}
+                disabled={detectedVideos.length === 0}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 hover:text-white border border-slate-700 transition-colors"
+                title="僅加入下方清單，不更換目前正在播放的影片"
+              >
+                <Plus className="w-3.5 h-3.5 text-blue-400" />
+                <span>僅加入清單</span>
+              </button>
+              <button
+                type="submit"
+                disabled={detectedVideos.length === 0}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white shadow-lg shadow-red-600/30 transition-all active:scale-95"
+                title="載入第一部影片至工作台，並將所有連結儲存至清單"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>立即載入播放</span>
+              </button>
+            </div>
+          </form>
+
+          {/* Divider */}
+          <div className="h-px bg-slate-800 my-2" />
+
+          {/* Lower Section: Stored YouTube Library / Browser History */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
+                <ListVideo className="w-4 h-4 text-red-400" />
+                <span>已存影片紀錄</span>
+                <span className="text-[10px] text-slate-500 font-mono">({library.length})</span>
+              </div>
+
+              {library.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearAll}
+                  className="text-[11px] text-slate-500 hover:text-rose-400 transition-colors flex items-center gap-1"
+                  title="清空瀏覽器中的所有 YouTube 影片紀錄"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  <span>清空紀錄</span>
+                </button>
+              )}
+            </div>
+
+            {/* Quick Filter Search if library has items */}
+            {library.length > 3 && (
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  placeholder="搜尋已存影片 ID..."
+                  value={searchFilter}
+                  onChange={(e) => setSearchFilter(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-slate-700"
+                />
+              </div>
+            )}
+
+            {/* Video Cards List */}
+            {library.length === 0 ? (
+              <div className="p-6 text-center bg-slate-950/40 border border-dashed border-slate-800 rounded-xl text-slate-500 text-xs">
+                尚未儲存任何 YouTube 影片紀錄。上方貼上網址即可自動記錄於瀏覽器！
+              </div>
+            ) : filteredLibrary.length === 0 ? (
+              <div className="p-4 text-center text-slate-500 text-xs">查無符合搜尋條件的影片</div>
+            ) : (
+              <div className="space-y-1.5 max-h-56 overflow-y-auto custom-scrollbar pr-0.5">
+                {filteredLibrary.map((item) => {
+                  const isCurrent = currentVideoId === item.id;
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => handlePlayFromLibrary(item)}
+                      className={`group flex items-center justify-between p-2 rounded-xl border transition-all cursor-pointer ${
+                        isCurrent
+                          ? 'bg-red-950/30 border-red-500/50 ring-1 ring-red-500/30'
+                          : 'bg-slate-950/60 hover:bg-slate-800/80 border-slate-800/80'
+                      }`}
+                    >
+                      {/* Left: Thumbnail & Info */}
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="relative w-16 h-10 rounded-lg overflow-hidden bg-slate-900 border border-slate-700/60 flex-shrink-0">
+                          <img
+                            src={`https://img.youtube.com/vi/${item.id}/mqdefault.jpg`}
+                            alt="thumb"
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                          <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors flex items-center justify-center">
+                            <Play className="w-3.5 h-3.5 text-white/90 fill-current opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all" />
+                          </div>
+                        </div>
+
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-semibold text-slate-200 truncate">
+                              {item.id}
+                            </span>
+                            {isCurrent && (
+                              <span className="text-[10px] font-bold text-red-400 bg-red-950/80 px-1.5 py-0.2 rounded border border-red-800/60">
+                                播放中
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-slate-500 block truncate max-w-xs">
+                            {item.url}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Right: Actions */}
+                      <div className="flex items-center gap-1.5 flex-shrink-0 pl-2">
+                        <button
+                          type="button"
+                          onClick={(e) => handleRemoveItem(e, item.id)}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                          title="從瀏覽器清單移除"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        </form>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="px-5 py-3 border-t border-slate-800 flex items-center justify-between bg-slate-950/60 text-xs flex-shrink-0">
+          <span className="text-[11px] text-slate-500">
+            已存影片不會寫入專案設定檔，隨選即播且不佔用檔案容量
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+          >
+            關閉
+          </button>
+        </div>
       </div>
     </div>
   );

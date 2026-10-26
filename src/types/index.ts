@@ -57,3 +57,10 @@ export interface ProjectConfig {
   aiKeyPoints: { time: number; label: string; description: string }[];
   updatedAt: string;
 }
+
+export interface YouTubeHistoryItem {
+  id: string; // 11-char Video ID
+  url: string; // Full YouTube URL
+  title?: string;
+  addedAt: number; // Timestamp
+}
