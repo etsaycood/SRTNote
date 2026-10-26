@@ -187,3 +187,10 @@ export function clearYouTubeLibrary(): void {
     localStorage.removeItem(YT_LIBRARY_STORAGE_KEY);
   } catch (e) {}
 }
+
+export function saveCustomLibraryOrder(items: YouTubeHistoryItem[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(YT_LIBRARY_STORAGE_KEY, JSON.stringify(items.slice(0, 100)));
+  } catch (e) {}
+}

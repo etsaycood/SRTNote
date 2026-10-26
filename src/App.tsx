@@ -63,7 +63,6 @@ export default function App() {
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [loopMode, setLoopMode] = useState<LoopMode>('off');
-  const [isMusicMode, setIsMusicMode] = useState(false);
   const [playlistQueue, setPlaylistQueue] = useState<string[]>([]);
   const [currentPlaylistIndex, setCurrentPlaylistIndex] = useState(0);
 
@@ -460,7 +459,7 @@ export default function App() {
   };
 
   // --- YouTube Loader Handler ---
-  const handleLoadYouTube = (url: string, videoId: string) => {
+  const handleLoadYouTube = (url: string, videoId: string, autoPlay: boolean = false) => {
     // Cache current subtitles for previous YouTube video before switching
     if (mediaType === 'youtube' && mediaUrl) {
       const prevId = extractYouTubeId(mediaUrl);
@@ -475,7 +474,7 @@ export default function App() {
     revokeMediaUrl(mediaUrl);
     setMediaUrl(url);
     setMediaType('youtube');
-    setIsPlaying(false);
+    setIsPlaying(autoPlay);
     setCurrentTime(0);
 
     // Rule 1-A: If subtitles exist for new videoId, switch to them; else clear subtitles
@@ -501,8 +500,7 @@ export default function App() {
     setPlaylistQueue(videoIds);
     setCurrentPlaylistIndex(0);
     const firstId = videoIds[0];
-    handleLoadYouTube(`https://www.youtube.com/watch?v=${firstId}`, firstId);
-    setTimeout(() => setIsPlaying(true), 250);
+    handleLoadYouTube(`https://www.youtube.com/watch?v=${firstId}`, firstId, true);
   };
 
   // --- Playback Ended Handler (Single Loop vs All Loop vs Next in Playlist) ---
@@ -513,21 +511,19 @@ export default function App() {
       return;
     }
 
-    // If there is an active playlist
+    // If there is an active playlist, seamlessly advance and autoplay next video
     if (playlistQueue.length > 0) {
       const nextIndex = currentPlaylistIndex + 1;
       if (nextIndex < playlistQueue.length) {
         setCurrentPlaylistIndex(nextIndex);
         const nextId = playlistQueue[nextIndex];
-        handleLoadYouTube(`https://www.youtube.com/watch?v=${nextId}`, nextId);
-        setTimeout(() => setIsPlaying(true), 250);
+        handleLoadYouTube(`https://www.youtube.com/watch?v=${nextId}`, nextId, true);
         return;
       } else if (loopMode === 'all') {
-        // Loop back to beginning of playlist
+        // Loop back to beginning of playlist and autoplay
         setCurrentPlaylistIndex(0);
         const firstId = playlistQueue[0];
-        handleLoadYouTube(`https://www.youtube.com/watch?v=${firstId}`, firstId);
-        setTimeout(() => setIsPlaying(true), 250);
+        handleLoadYouTube(`https://www.youtube.com/watch?v=${firstId}`, firstId, true);
         return;
       }
     } else if (loopMode === 'all') {
@@ -546,11 +542,6 @@ export default function App() {
       if (prev === 'single') return 'all';
       return 'off';
     });
-  };
-
-  // --- Toggle Music Mode (Bandwidth Saver) ---
-  const handleToggleMusicMode = () => {
-    setIsMusicMode((prev) => !prev);
   };
 
   // --- Pasted Transcript Handler ---
@@ -716,7 +707,6 @@ export default function App() {
     setPlaylistQueue([]);
     setCurrentPlaylistIndex(0);
     setLoopMode('off');
-    setIsMusicMode(false);
     setSlides(SAMPLE_PROJECT.slides);
     setAiSummary(SAMPLE_PROJECT.aiSummary);
     setDuration(SAMPLE_PROJECT.mediaDuration);
@@ -810,8 +800,6 @@ export default function App() {
             isMuted={isMuted}
             loopMode={loopMode}
             onToggleLoopMode={handleToggleLoopMode}
-            isMusicMode={isMusicMode}
-            onToggleMusicMode={handleToggleMusicMode}
             onTimeUpdate={(t) => setCurrentTime(t)}
             onDurationChange={handleDurationChange}
             onEnded={handleEnded}

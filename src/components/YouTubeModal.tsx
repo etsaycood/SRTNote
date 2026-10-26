@@ -5,7 +5,8 @@ import {
   getStoredYouTubeLibrary,
   saveMultipleYouTubeToLibrary,
   removeYouTubeFromLibrary,
-  clearYouTubeLibrary
+  clearYouTubeLibrary,
+  saveCustomLibraryOrder
 } from '../utils/youtubeHelper';
 import { YouTubeHistoryItem, SubtitleItem } from '../types';
 import { YoutubeIcon } from './icons/YoutubeIcon';
@@ -21,7 +22,9 @@ import {
   CheckSquare,
   Square,
   FileText,
-  Music
+  GripVertical,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 
 interface YouTubeModalProps {
@@ -48,6 +51,10 @@ export const YouTubeModal: React.FC<YouTubeModalProps> = ({
   const [library, setLibrary] = useState<YouTubeHistoryItem[]>([]);
   const [searchFilter, setSearchFilter] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Drag and Drop state (Method B)
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   // Reload stored library whenever modal opens
   useEffect(() => {
@@ -175,9 +182,62 @@ export const YouTubeModal: React.FC<YouTubeModalProps> = ({
     onClose();
   };
 
-  // Filter library by search query
+  // --- 方式 A：按鈕上移 / 下移 (Button Move Up / Down) ---
+  const handleMoveItem = (e: React.MouseEvent, index: number, direction: 'up' | 'down') => {
+    e.stopPropagation();
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= library.length) return;
+
+    const nextList = [...library];
+    const [moved] = nextList.splice(index, 1);
+    nextList.splice(targetIndex, 0, moved);
+
+    setLibrary(nextList);
+    saveCustomLibraryOrder(nextList);
+  };
+
+  // --- 方式 B：滑鼠/觸控拖曳排序 (Drag and Drop) ---
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const nextList = [...library];
+    const [draggedItem] = nextList.splice(draggedIndex, 1);
+    nextList.splice(dropIndex, 0, draggedItem);
+
+    setLibrary(nextList);
+    saveCustomLibraryOrder(nextList);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  // Filter library by search query (if actively filtering, disable drag-and-drop to prevent index mismatch)
+  const isFiltering = searchFilter.trim().length > 0;
   const filteredLibrary = library.filter((item) => {
-    if (!searchFilter.trim()) return true;
+    if (!isFiltering) return true;
     const q = searchFilter.toLowerCase();
     return item.id.toLowerCase().includes(q) || (item.title && item.title.toLowerCase().includes(q));
   });
@@ -196,7 +256,7 @@ export const YouTubeModal: React.FC<YouTubeModalProps> = ({
             </div>
             <div>
               <h3 className="text-sm font-bold text-white">YouTube 影片庫與多連結管理</h3>
-              <p className="text-[11px] text-slate-400">支援單筆/多行貼上、多片勾選輪播，紀錄存於瀏覽器</p>
+              <p className="text-[11px] text-slate-400">支援批次輸入、輪播排序（▲▼按鈕或拖曳把手），紀錄儲存於瀏覽器</p>
             </div>
           </div>
 
@@ -322,6 +382,9 @@ export const YouTubeModal: React.FC<YouTubeModalProps> = ({
               </div>
 
               <div className="flex items-center gap-2">
+                <span className="text-[10px] text-slate-500 hidden sm:inline">
+                  (可拖曳把手或按 ▲▼ 調整順序)
+                </span>
                 {library.length > 0 && (
                   <button
                     type="button"
@@ -358,27 +421,49 @@ export const YouTubeModal: React.FC<YouTubeModalProps> = ({
             ) : filteredLibrary.length === 0 ? (
               <div className="p-4 text-center text-slate-500 text-xs">查無符合搜尋條件的影片</div>
             ) : (
-              <div className="space-y-1.5 max-h-56 overflow-y-auto custom-scrollbar pr-0.5">
-                {filteredLibrary.map((item) => {
+              <div className="space-y-1.5 max-h-60 overflow-y-auto custom-scrollbar pr-0.5">
+                {filteredLibrary.map((item, index) => {
                   const isCurrent = currentVideoId === item.id;
                   const isSelected = selectedIds.has(item.id);
                   const hasSrt = subtitlesByMedia[item.id] && subtitlesByMedia[item.id].length > 0;
                   const queueIndex = playlistQueue.indexOf(item.id);
+                  const isDragging = draggedIndex === index;
+                  const isDragOver = dragOverIndex === index;
 
                   return (
                     <div
                       key={item.id}
+                      draggable={!isFiltering}
+                      onDragStart={(e) => handleDragStart(e, index)}
+                      onDragOver={(e) => handleDragOver(e, index)}
+                      onDrop={(e) => handleDrop(e, index)}
+                      onDragEnd={handleDragEnd}
                       onClick={() => handlePlayFromLibrary(item)}
                       className={`group flex items-center justify-between p-2 rounded-xl border transition-all cursor-pointer ${
-                        isCurrent
+                        isDragging
+                          ? 'opacity-40 scale-98 border-dashed border-blue-500'
+                          : isDragOver
+                          ? 'border-blue-400 bg-blue-950/40 ring-1 ring-blue-400'
+                          : isCurrent
                           ? 'bg-red-950/30 border-red-500/50 ring-1 ring-red-500/30'
                           : isSelected
                           ? 'bg-blue-950/25 border-blue-600/40'
                           : 'bg-slate-950/60 hover:bg-slate-800/80 border-slate-800/80'
                       }`}
                     >
-                      {/* Left: Checkbox + Thumbnail + Info */}
-                      <div className="flex items-center gap-2.5 min-w-0">
+                      {/* Left: Drag Handle (方式 B) + Checkbox + Thumbnail + Details */}
+                      <div className="flex items-center gap-2 min-w-0">
+                        {/* 方式 B：拖曳排序把手 (Drag handle) */}
+                        {!isFiltering && (
+                          <div
+                            className="p-1 -ml-1 text-slate-600 group-hover:text-slate-400 hover:text-white cursor-grab active:cursor-grabbing transition-colors flex-shrink-0"
+                            title="按住上下拖曳調整順序 (方式 B)"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <GripVertical className="w-3.5 h-3.5" />
+                          </div>
+                        )}
+
                         {/* Checkbox for playlist rotation */}
                         <button
                           type="button"
@@ -438,12 +523,35 @@ export const YouTubeModal: React.FC<YouTubeModalProps> = ({
                         </div>
                       </div>
 
-                      {/* Right: Actions */}
-                      <div className="flex items-center gap-1.5 flex-shrink-0 pl-2">
+                      {/* Right: Actions (方式 A: 上移/下移按鈕 + 刪除按鈕) */}
+                      <div className="flex items-center gap-1 flex-shrink-0 pl-2">
+                        {/* 方式 A：上移按鈕 */}
+                        <button
+                          type="button"
+                          disabled={index === 0 || isFiltering}
+                          onClick={(e) => handleMoveItem(e, index, 'up')}
+                          className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-20 disabled:hover:bg-transparent transition-colors"
+                          title="往上移 (方式 A)"
+                        >
+                          <ChevronUp className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* 方式 A：下移按鈕 */}
+                        <button
+                          type="button"
+                          disabled={index === library.length - 1 || isFiltering}
+                          onClick={(e) => handleMoveItem(e, index, 'down')}
+                          className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-20 disabled:hover:bg-transparent transition-colors"
+                          title="往下移 (方式 A)"
+                        >
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* 刪除紀錄按鈕 */}
                         <button
                           type="button"
                           onClick={(e) => handleRemoveItem(e, item.id)}
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                          className="p-1 rounded-md text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors ml-0.5"
                           title="從瀏覽器清單移除"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

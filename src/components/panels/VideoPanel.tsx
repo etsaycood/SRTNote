@@ -12,8 +12,6 @@ import {
   Link as LinkIcon,
   Repeat,
   Repeat1,
-  Headphones,
-  Music,
   Play,
   Pause,
   RotateCcw,
@@ -37,8 +35,6 @@ interface VideoPanelProps {
   onToggleLoopMode?: () => void;
   isLooping?: boolean;
   onToggleLoop?: () => void;
-  isMusicMode?: boolean;
-  onToggleMusicMode?: () => void;
   onTimeUpdate: (time: number) => void;
   onDurationChange?: (duration: number) => void;
   onEnded: () => void;
@@ -67,8 +63,6 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
   onToggleLoopMode,
   isLooping = false,
   onToggleLoop,
-  isMusicMode = false,
-  onToggleMusicMode,
   onTimeUpdate,
   onDurationChange,
   onEnded,
@@ -206,7 +200,9 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
 
   const youtubeVideoId = mediaType === 'youtube' ? extractYouTubeId(mediaUrl || '') : null;
 
-  // Initialize or reload YouTube player when mediaType is 'youtube' and videoId changes
+  const currentVideoIdRef = useRef<string | null>(null);
+
+  // Initialize or seamlessly reload YouTube player when mediaType is 'youtube' and videoId changes
   useEffect(() => {
     if (mediaType !== 'youtube' || !youtubeVideoId) {
       if (ytPlayerRef.current) {
@@ -215,10 +211,36 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
         } catch (e) {}
         ytPlayerRef.current = null;
         isYtReadyRef.current = false;
+        currentVideoIdRef.current = null;
       }
       return;
     }
 
+    // Seamlessly load next video if player already exists and ready, retaining autoplay permission
+    if (
+      ytPlayerRef.current &&
+      isYtReadyRef.current &&
+      typeof ytPlayerRef.current.loadVideoById === 'function' &&
+      currentVideoIdRef.current !== youtubeVideoId
+    ) {
+      currentVideoIdRef.current = youtubeVideoId;
+      try {
+        if (isPlaying) {
+          ytPlayerRef.current.loadVideoById(youtubeVideoId, 0);
+        } else {
+          ytPlayerRef.current.cueVideoById(youtubeVideoId, 0);
+        }
+        return;
+      } catch (e) {
+        // Fallback to recreate if loadVideoById throws
+      }
+    }
+
+    if (currentVideoIdRef.current === youtubeVideoId && ytPlayerRef.current) {
+      return;
+    }
+
+    currentVideoIdRef.current = youtubeVideoId;
     let isMounted = true;
     setYtError(null);
 
@@ -234,7 +256,7 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
       ytPlayerRef.current = new YT.Player(youtubeContainerRef.current, {
         videoId: youtubeVideoId,
         playerVars: {
-          autoplay: 0,
+          autoplay: isPlaying ? 1 : 0,
           controls: 1,
           rel: 0,
           modestbranding: 1,
@@ -253,6 +275,9 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
               }
               event.target.setVolume(isMuted ? 0 : volume * 100);
               event.target.setPlaybackRate(playbackRate);
+              if (isPlaying) {
+                event.target.playVideo();
+              }
             } catch (e) {}
           },
           onStateChange: (event: any) => {
@@ -287,26 +312,8 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
 
     return () => {
       isMounted = false;
-      if (ytPlayerRef.current) {
-        try {
-          ytPlayerRef.current.destroy();
-        } catch (e) {}
-        ytPlayerRef.current = null;
-        isYtReadyRef.current = false;
-      }
     };
   }, [mediaType, youtubeVideoId]);
-
-  // Adjust YouTube playback quality when Music Mode toggles
-  useEffect(() => {
-    if (ytPlayerRef.current && isYtReadyRef.current) {
-      try {
-        if (isMusicMode) {
-          ytPlayerRef.current.setPlaybackQuality?.('small');
-        }
-      } catch (e) {}
-    }
-  }, [isMusicMode]);
 
   // Sync external currentTime with video element or YouTube player
   useEffect(() => {
@@ -527,25 +534,6 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
             </button>
           )}
 
-          {/* Music Mode (Low Quality / Bandwidth Saver) Button */}
-          {onToggleMusicMode && (
-            <button
-              onClick={onToggleMusicMode}
-              className={`p-1.5 rounded-lg transition-colors flex items-center justify-center ${
-                isMusicMode
-                  ? 'bg-emerald-600/30 text-emerald-400 border border-emerald-500/40 shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
-              }`}
-              title={
-                isMusicMode
-                  ? '音樂模式：已開啟（極低畫質省流中）'
-                  : '音樂模式：關閉（點擊切換為極低畫質音樂模式）'
-              }
-            >
-              <Headphones className="w-3.5 h-3.5" />
-            </button>
-          )}
-
           {/* YouTube Link Button */}
           {onOpenYouTubeModal && (
             <button
@@ -598,85 +586,7 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
                 </button>
               </div>
             ) : (
-              <>
-                <div
-                  ref={youtubeContainerRef}
-                  className={
-                    isMusicMode
-                      ? 'absolute opacity-0 pointer-events-none w-[1px] h-[1px] overflow-hidden'
-                      : 'w-full h-full'
-                  }
-                />
-                {isMusicMode && (
-                  <div className="relative w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 overflow-hidden select-none p-4">
-                    {/* Ambient Glow */}
-                    <div
-                      className="absolute inset-0 bg-cover bg-center opacity-25 blur-3xl scale-125 pointer-events-none"
-                      style={{ backgroundImage: `url(https://img.youtube.com/vi/${youtubeVideoId}/mqdefault.jpg)` }}
-                    />
-
-                    {/* Content Box */}
-                    <div className="relative z-10 flex flex-col items-center gap-3 max-w-sm text-center">
-                      {/* Album / Thumbnail Art */}
-                      <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-2xl overflow-hidden shadow-2xl border border-slate-700/80 group">
-                        <img
-                          src={`https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`}
-                          alt="art"
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                          <button
-                            onClick={onPlayPause}
-                            className="w-12 h-12 rounded-full bg-emerald-600/90 hover:bg-emerald-500 text-white flex items-center justify-center shadow-lg transition-transform active:scale-90"
-                            title={isPlaying ? '暫停' : '播放'}
-                          >
-                            {isPlaying ? (
-                              <Pause className="w-5 h-5 fill-current" />
-                            ) : (
-                              <Play className="w-5 h-5 fill-current ml-0.5" />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Animated Equalizer Sound Bars */}
-                      <div className="flex items-end justify-center gap-1.5 h-6 my-1">
-                        {[40, 75, 55, 90, 60, 80, 45].map((h, i) => (
-                          <div
-                            key={i}
-                            className="w-1 bg-emerald-400 rounded-full transition-all duration-300"
-                            style={{
-                              height: isPlaying
-                                ? `${Math.max(20, (h * (((Math.floor(currentTime * 4) + i * 17) % 100) + 20)) / 120)}%`
-                                : '20%',
-                              opacity: isPlaying ? 0.9 : 0.4
-                            }}
-                          />
-                        ))}
-                      </div>
-
-                      {/* Badge & Title */}
-                      <div>
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 mb-1">
-                          <Headphones className="w-3 h-3" />
-                          音樂省流模式（低畫質）
-                        </span>
-                        <h4 className="font-mono text-xs font-bold text-slate-200 truncate max-w-[240px]">
-                          {youtubeVideoId}
-                        </h4>
-                      </div>
-
-                      {/* Switch back button */}
-                      <button
-                        onClick={onToggleMusicMode}
-                        className="text-[11px] text-slate-400 hover:text-white underline decoration-slate-600 transition-colors pt-0.5"
-                      >
-                        切換回影片畫面
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </>
+              <div ref={youtubeContainerRef} className="w-full h-full" />
             )}
           </div>
         ) : mediaType === 'video' && mediaUrl ? (
