@@ -1,4 +1,4 @@
-# SyncNote - 智慧影音同步學習與筆記工作台
+# SRTcNote - 智慧影音同步學習與筆記工作台
 
 <div align="center">
 
