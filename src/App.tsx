@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { PanelId, LayoutPreset, SubtitleItem, SlideItem, ProjectConfig, LMStudioConfig, TimeRange, MediaType } from './types';
+import { PanelId, LayoutPreset, SubtitleItem, SlideItem, ProjectConfig, LMStudioConfig, TimeRange, MediaType, LoopMode } from './types';
 import { SAMPLE_PROJECT } from './mock/sampleProject';
 import { DEFAULT_LM_STUDIO_CONFIG } from './utils/lmStudioClient';
 import { parseSubtitleContent } from './utils/srtParser';
@@ -41,6 +41,7 @@ export default function App() {
   const [mediaUrl, setMediaUrl] = useState<string | undefined>(undefined);
   const [mediaType, setMediaType] = useState<MediaType>('audio');
   const [subtitles, setSubtitles] = useState<SubtitleItem[]>(SAMPLE_PROJECT.subtitles);
+  const [subtitlesByMedia, setSubtitlesByMedia] = useState<Record<string, SubtitleItem[]>>({});
   const [slides, setSlides] = useState<SlideItem[]>(SAMPLE_PROJECT.slides);
   const [aiSummary, setAiSummary] = useState<string>(SAMPLE_PROJECT.aiSummary);
 
@@ -61,7 +62,10 @@ export default function App() {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
-  const [isLooping, setIsLooping] = useState(false);
+  const [loopMode, setLoopMode] = useState<LoopMode>('off');
+  const [isMusicMode, setIsMusicMode] = useState(false);
+  const [playlistQueue, setPlaylistQueue] = useState<string[]>([]);
+  const [currentPlaylistIndex, setCurrentPlaylistIndex] = useState(0);
 
   // --- Selected A-B Time Range State ---
   const [timeRange, setTimeRange] = useState<TimeRange>({
@@ -203,7 +207,7 @@ export default function App() {
       };
       const onTime = () => setCurrentTime(audio.currentTime);
       const onEnd = () => {
-        if (isLooping) {
+        if (loopMode === 'single' || loopMode === 'all') {
           audio.currentTime = 0;
           audio.play().catch(() => setIsPlaying(false));
         } else {
@@ -222,7 +226,7 @@ export default function App() {
         audio.removeEventListener('ended', onEnd);
       };
     }
-  }, [mediaUrl, mediaType, isLooping]);
+  }, [mediaUrl, mediaType, loopMode]);
 
   // Sync Audio Playback
   useEffect(() => {
@@ -248,7 +252,7 @@ export default function App() {
         setCurrentTime((prev) => {
           const next = prev + (stepMs / 1000) * playbackRate;
           if (next >= duration) {
-            if (isLooping) {
+            if (loopMode === 'single' || loopMode === 'all') {
               return 0;
             }
             setIsPlaying(false);
@@ -259,7 +263,7 @@ export default function App() {
       }, stepMs);
     }
     return () => clearInterval(timer);
-  }, [isPlaying, mediaUrl, duration, playbackRate, isLooping]);
+  }, [isPlaying, mediaUrl, duration, playbackRate, loopMode]);
 
   // --- Play/Pause Toggle ---
   const handlePlayPause = () => {
@@ -406,13 +410,21 @@ export default function App() {
   // --- Save Project Configuration ---
   const handleSaveConfig = async () => {
     setIsSaving(true);
+    const activeYtId = mediaType === 'youtube' && mediaUrl ? extractYouTubeId(mediaUrl) : null;
     const config: ProjectConfig = {
       version: '1.0.0',
       title: projectTitle,
       mediaType,
       youtubeUrl: mediaType === 'youtube' ? mediaUrl : undefined,
+      youtubeId: activeYtId || undefined,
       mediaDuration: duration,
       subtitles,
+      subtitlesByMedia: {
+        ...subtitlesByMedia,
+        ...(activeYtId ? { [activeYtId]: subtitles } : {})
+      },
+      playlistVideoIds: playlistQueue.length > 0 ? playlistQueue : undefined,
+      loopMode,
       slides,
       aiSummary,
       aiKeyPoints: [],
@@ -449,26 +461,127 @@ export default function App() {
 
   // --- YouTube Loader Handler ---
   const handleLoadYouTube = (url: string, videoId: string) => {
+    // Cache current subtitles for previous YouTube video before switching
+    if (mediaType === 'youtube' && mediaUrl) {
+      const prevId = extractYouTubeId(mediaUrl);
+      if (prevId) {
+        setSubtitlesByMedia((prev) => ({
+          ...prev,
+          [prevId]: subtitles
+        }));
+      }
+    }
+
     revokeMediaUrl(mediaUrl);
     setMediaUrl(url);
     setMediaType('youtube');
     setIsPlaying(false);
     setCurrentTime(0);
-    if (projectTitle === SAMPLE_PROJECT.title) {
+
+    // Rule 1-A: If subtitles exist for new videoId, switch to them; else clear subtitles
+    const existingSubs = subtitlesByMedia[videoId];
+    if (existingSubs && existingSubs.length > 0) {
+      setSubtitles(existingSubs);
+      const maxSubTime = Math.max(...existingSubs.map((s) => s.endTime || s.startTime || 0));
+      if (maxSubTime > 0) {
+        setDuration((prev) => Math.max(prev, Math.ceil(maxSubTime + 3)));
+      }
+    } else {
+      setSubtitles([]);
+    }
+
+    if (projectTitle === SAMPLE_PROJECT.title || projectTitle.startsWith('YouTube:')) {
       setProjectTitle(`YouTube: ${videoId}`);
     }
   };
 
+  // --- Playlist & Rotation Handlers ---
+  const handleStartPlaylist = (videoIds: string[]) => {
+    if (!videoIds || videoIds.length === 0) return;
+    setPlaylistQueue(videoIds);
+    setCurrentPlaylistIndex(0);
+    const firstId = videoIds[0];
+    handleLoadYouTube(`https://www.youtube.com/watch?v=${firstId}`, firstId);
+    setTimeout(() => setIsPlaying(true), 250);
+  };
+
+  // --- Playback Ended Handler (Single Loop vs All Loop vs Next in Playlist) ---
+  const handleEnded = () => {
+    if (loopMode === 'single') {
+      handleSeek(timeRange.enabled ? timeRange.start : 0);
+      setIsPlaying(true);
+      return;
+    }
+
+    // If there is an active playlist
+    if (playlistQueue.length > 0) {
+      const nextIndex = currentPlaylistIndex + 1;
+      if (nextIndex < playlistQueue.length) {
+        setCurrentPlaylistIndex(nextIndex);
+        const nextId = playlistQueue[nextIndex];
+        handleLoadYouTube(`https://www.youtube.com/watch?v=${nextId}`, nextId);
+        setTimeout(() => setIsPlaying(true), 250);
+        return;
+      } else if (loopMode === 'all') {
+        // Loop back to beginning of playlist
+        setCurrentPlaylistIndex(0);
+        const firstId = playlistQueue[0];
+        handleLoadYouTube(`https://www.youtube.com/watch?v=${firstId}`, firstId);
+        setTimeout(() => setIsPlaying(true), 250);
+        return;
+      }
+    } else if (loopMode === 'all') {
+      handleSeek(timeRange.enabled ? timeRange.start : 0);
+      setIsPlaying(true);
+      return;
+    }
+
+    setIsPlaying(false);
+  };
+
+  // --- Toggle Loop Mode (Order B: off -> single -> all -> off) ---
+  const handleToggleLoopMode = () => {
+    setLoopMode((prev) => {
+      if (prev === 'off') return 'single';
+      if (prev === 'single') return 'all';
+      return 'off';
+    });
+  };
+
+  // --- Toggle Music Mode (Bandwidth Saver) ---
+  const handleToggleMusicMode = () => {
+    setIsMusicMode((prev) => !prev);
+  };
+
   // --- Pasted Transcript Handler ---
   const handleImportPastedSubtitles = (newSubs: SubtitleItem[], append: boolean) => {
-    if (append) {
-      setSubtitles((prev) => [...prev, ...newSubs]);
-    } else {
-      setSubtitles(newSubs);
+    const updatedSubs = append ? [...subtitles, ...newSubs] : newSubs;
+    setSubtitles(updatedSubs);
+    if (mediaType === 'youtube' && mediaUrl) {
+      const vid = extractYouTubeId(mediaUrl);
+      if (vid) {
+        setSubtitlesByMedia((prev) => ({
+          ...prev,
+          [vid]: updatedSubs
+        }));
+      }
     }
     const maxSubTime = Math.max(...newSubs.map((s) => s.endTime || s.startTime || 0));
     if (maxSubTime > 0) {
       setDuration((prev) => Math.max(prev, Math.ceil(maxSubTime + 3)));
+    }
+  };
+
+  const handleUpdateSubtitles = (newSubs: SubtitleItem[]) => {
+    setSubtitles(newSubs);
+    if (mediaType === 'youtube' && mediaUrl) {
+      const vid = extractYouTubeId(mediaUrl);
+      if (vid) {
+        setSubtitlesByMedia((prev) => ({
+          ...prev,
+          [vid]: newSubs
+        }));
+      }
     }
   };
 
@@ -482,6 +595,15 @@ export default function App() {
           const parsed = parseSubtitleContent(text);
           if (parsed.length > 0) {
             setSubtitles(parsed);
+            if (mediaType === 'youtube' && mediaUrl) {
+              const vid = extractYouTubeId(mediaUrl);
+              if (vid) {
+                setSubtitlesByMedia((prev) => ({
+                  ...prev,
+                  [vid]: parsed
+                }));
+              }
+            }
             const maxSubTime = Math.max(...parsed.map(s => s.endTime || s.startTime || 0));
             if (maxSubTime > 0) {
               setDuration(prev => Math.max(prev, maxSubTime));
@@ -561,6 +683,9 @@ export default function App() {
           const parsed: ProjectConfig = JSON.parse(event.target?.result as string);
           if (parsed.title) setProjectTitle(parsed.title);
           if (parsed.subtitles) setSubtitles(parsed.subtitles);
+          if (parsed.subtitlesByMedia) setSubtitlesByMedia(parsed.subtitlesByMedia);
+          if (parsed.playlistVideoIds) setPlaylistQueue(parsed.playlistVideoIds);
+          if (parsed.loopMode) setLoopMode(parsed.loopMode);
           if (parsed.mediaType) setMediaType(parsed.mediaType);
           if (parsed.mediaType === 'youtube' && parsed.youtubeUrl) {
             setMediaUrl(parsed.youtubeUrl);
@@ -587,6 +712,11 @@ export default function App() {
     setMediaUrl(undefined);
     setMediaType('audio');
     setSubtitles(SAMPLE_PROJECT.subtitles);
+    setSubtitlesByMedia({});
+    setPlaylistQueue([]);
+    setCurrentPlaylistIndex(0);
+    setLoopMode('off');
+    setIsMusicMode(false);
     setSlides(SAMPLE_PROJECT.slides);
     setAiSummary(SAMPLE_PROJECT.aiSummary);
     setDuration(SAMPLE_PROJECT.mediaDuration);
@@ -678,18 +808,13 @@ export default function App() {
             playbackRate={playbackRate}
             volume={volume}
             isMuted={isMuted}
-            isLooping={isLooping}
-            onToggleLoop={() => setIsLooping((prev) => !prev)}
+            loopMode={loopMode}
+            onToggleLoopMode={handleToggleLoopMode}
+            isMusicMode={isMusicMode}
+            onToggleMusicMode={handleToggleMusicMode}
             onTimeUpdate={(t) => setCurrentTime(t)}
             onDurationChange={handleDurationChange}
-            onEnded={() => {
-              if (isLooping) {
-                handleSeek(timeRange.enabled ? timeRange.start : 0);
-                setIsPlaying(true);
-              } else {
-                setIsPlaying(false);
-              }
-            }}
+            onEnded={handleEnded}
             onPlayPause={handlePlayPause}
             onSeek={handleSeek}
             onToggleMute={() => setIsMuted(!isMuted)}
@@ -730,12 +855,13 @@ export default function App() {
             subtitles={subtitles}
             currentTime={currentTime}
             onSeek={handleSeek}
-            onUpdateSubtitles={setSubtitles}
+            onUpdateSubtitles={handleUpdateSubtitles}
             isMaximized={activeMaximizedPanel === 'transcript'}
             onToggleMaximize={() => toggleMaximizePanel('transcript')}
             onClose={() => handleClosePanel('transcript')}
             onUploadSubtitles={handleUploadSubtitles}
             onOpenPasteModal={() => setIsPasteTranscriptModalOpen(true)}
+            currentMediaId={mediaType === 'youtube' && mediaUrl ? extractYouTubeId(mediaUrl) || undefined : undefined}
           />
         );
 
@@ -828,8 +954,8 @@ export default function App() {
             playbackRate={playbackRate}
             volume={volume}
             isMuted={isMuted}
-            isLooping={isLooping}
-            onToggleLoop={() => setIsLooping((prev) => !prev)}
+            loopMode={loopMode}
+            onToggleLoop={handleToggleLoopMode}
             slides={slides}
             subtitles={subtitles}
             mediaUrl={mediaUrl}
@@ -870,6 +996,9 @@ export default function App() {
         onClose={() => setIsYouTubeModalOpen(false)}
         onLoadYouTube={handleLoadYouTube}
         currentVideoId={mediaType === 'youtube' && mediaUrl ? extractYouTubeId(mediaUrl) || undefined : undefined}
+        playlistQueue={playlistQueue}
+        onStartPlaylist={handleStartPlaylist}
+        subtitlesByMedia={subtitlesByMedia}
       />
 
       {/* 7. Paste Transcript Modal */}

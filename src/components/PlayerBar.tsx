@@ -1,6 +1,6 @@
 import React from 'react';
 import { formatTime } from '../utils/timeFormatter';
-import { SlideItem, SubtitleItem, TimeRange } from '../types';
+import { SlideItem, SubtitleItem, TimeRange, LoopMode } from '../types';
 import { AudioWaveform } from './AudioWaveform';
 import {
   Play,
@@ -9,7 +9,8 @@ import {
   RotateCw,
   Volume2,
   VolumeX,
-  Repeat
+  Repeat,
+  Repeat1
 } from 'lucide-react';
 
 interface PlayerBarProps {
@@ -19,6 +20,7 @@ interface PlayerBarProps {
   playbackRate: number;
   volume: number;
   isMuted: boolean;
+  loopMode?: LoopMode;
   isLooping?: boolean;
   onToggleLoop?: () => void;
   slides: SlideItem[];
@@ -41,6 +43,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
   playbackRate,
   volume,
   isMuted,
+  loopMode,
   isLooping = false,
   onToggleLoop,
   slides,
@@ -55,6 +58,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
   onToggleMute,
   isMobile = false
 }) => {
+  const activeLoopMode: LoopMode = loopMode || (isLooping ? 'single' : 'off');
   const scrubberRef = React.useRef<HTMLDivElement>(null);
   const [isScrubbing, setIsScrubbing] = React.useState(false);
   const [scrubTime, setScrubTime] = React.useState<number | null>(null);
@@ -188,6 +192,31 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
                 <Volume2 className="w-4 h-4 text-slate-200" />
               )}
             </button>
+            {onToggleLoop && (
+              <button
+                onClick={onToggleLoop}
+                className={`p-1.5 rounded-lg transition-colors active:scale-95 flex items-center justify-center ${
+                  activeLoopMode === 'single'
+                    ? 'text-blue-400 bg-blue-500/20'
+                    : activeLoopMode === 'all'
+                    ? 'text-purple-400 bg-purple-500/20'
+                    : 'text-slate-400 hover:text-white bg-slate-800/80'
+                }`}
+                title={
+                  activeLoopMode === 'single'
+                    ? '重複播放：單曲循環'
+                    : activeLoopMode === 'all'
+                    ? '重複播放：全部循環'
+                    : '重複播放：關閉'
+                }
+              >
+                {activeLoopMode === 'single' ? (
+                  <Repeat1 className="w-4 h-4" />
+                ) : (
+                  <Repeat className="w-4 h-4" />
+                )}
+              </button>
+            )}
           </div>
 
           {/* Right: 時間 (Time Display) */}
@@ -236,13 +265,28 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
           <button
             onClick={onToggleLoop}
             className={`p-1.5 rounded-lg transition-colors flex items-center gap-1 ${
-              isLooping
+              activeLoopMode === 'single'
                 ? 'bg-blue-600/25 text-blue-400 border border-blue-500/40 shadow-sm'
+                : activeLoopMode === 'all'
+                ? 'bg-purple-600/25 text-purple-400 border border-purple-500/40 shadow-sm'
                 : 'hover:text-white hover:bg-slate-800'
             }`}
-            title={isLooping ? '關閉重複播放 (已開啟循環)' : '開啟重複播放 (單曲循環)'}
+            title={
+              activeLoopMode === 'single'
+                ? '重複播放：單曲循環 (點擊切換為全部循環)'
+                : activeLoopMode === 'all'
+                ? '重複播放：全部循環 (點擊關閉循環)'
+                : '重複播放：關閉 (點擊開啟單曲循環)'
+            }
           >
-            <Repeat className="w-4 h-4" />
+            {activeLoopMode === 'single' ? (
+              <Repeat1 className="w-4 h-4" />
+            ) : (
+              <Repeat className="w-4 h-4" />
+            )}
+            {activeLoopMode === 'all' && (
+              <span className="text-[9px] font-bold font-mono">ALL</span>
+            )}
           </button>
         )}
       </div>

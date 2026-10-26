@@ -43,6 +43,8 @@ export interface PanelConfig {
 
 export type MediaType = 'video' | 'audio' | 'youtube';
 
+export type LoopMode = 'off' | 'single' | 'all';
+
 export interface ProjectConfig {
   version: string;
   title: string;
@@ -52,6 +54,9 @@ export interface ProjectConfig {
   mediaFileName?: string;
   mediaDuration: number;
   subtitles: SubtitleItem[];
+  subtitlesByMedia?: Record<string, SubtitleItem[]>;
+  playlistVideoIds?: string[];
+  loopMode?: LoopMode;
   slides: SlideItem[];
   aiSummary: string;
   aiKeyPoints: { time: number; label: string; description: string }[];
@@ -63,4 +68,5 @@ export interface YouTubeHistoryItem {
   url: string; // Full YouTube URL
   title?: string;
   addedAt: number; // Timestamp
+  hasSubtitles?: boolean;
 }

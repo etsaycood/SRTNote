@@ -31,6 +31,7 @@ interface TranscriptPanelProps {
   onClose?: () => void;
   onUploadSubtitles: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onOpenPasteModal?: () => void;
+  currentMediaId?: string;
 }
 
 export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
@@ -42,7 +43,8 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
   onToggleMaximize,
   onClose,
   onUploadSubtitles,
-  onOpenPasteModal
+  onOpenPasteModal,
+  currentMediaId
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
@@ -273,9 +275,40 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
         ref={containerRef}
         className="flex-1 overflow-y-auto p-4 pt-14 space-y-2.5 custom-scrollbar bg-slate-900/60 h-full w-full"
       >
-        {filteredSubtitles.length === 0 ? (
+        {subtitles.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 px-4 text-center space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-blue-600/15 border border-blue-500/30 text-blue-400 flex items-center justify-center shadow-lg shadow-blue-600/10">
+              <FileText className="w-6 h-6" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-bold text-slate-200">
+                {currentMediaId ? `尚未為影片 (${currentMediaId}) 上傳字幕` : '尚未載入逐字稿內容'}
+              </p>
+              <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
+                上傳或貼上逐字稿後，將自動與此影片 ID 綁定對應，匯出設定檔後下次載入依然能比對呈現！
+              </p>
+            </div>
+            <div className="flex items-center gap-2 pt-2">
+              <label className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer shadow-lg shadow-blue-600/30 transition-all active:scale-95">
+                <Upload className="w-3.5 h-3.5" />
+                <span>上傳 SRT / VTT</span>
+                <input type="file" accept=".srt,.vtt,.txt" onChange={onUploadSubtitles} className="hidden" />
+              </label>
+              {onOpenPasteModal && (
+                <button
+                  type="button"
+                  onClick={onOpenPasteModal}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 transition-colors"
+                >
+                  <Clipboard className="w-3.5 h-3.5 text-blue-400" />
+                  <span>貼上文字</span>
+                </button>
+              )}
+            </div>
+          </div>
+        ) : filteredSubtitles.length === 0 ? (
           <div className="text-center py-12 text-slate-500 text-sm">
-            查無相符逐字稿內容
+            查無相符逐字稿搜尋結果
           </div>
         ) : (
           filteredSubtitles.map((sub) => {

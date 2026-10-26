@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { MediaType } from '../../types';
+import { MediaType, LoopMode } from '../../types';
 import { extractYouTubeId, loadYouTubeIframeAPI } from '../../utils/youtubeHelper';
 import {
   Video,
@@ -11,6 +11,9 @@ import {
   GripVertical,
   Link as LinkIcon,
   Repeat,
+  Repeat1,
+  Headphones,
+  Music,
   Play,
   Pause,
   RotateCcw,
@@ -30,8 +33,12 @@ interface VideoPanelProps {
   playbackRate?: number;
   volume?: number;
   isMuted?: boolean;
+  loopMode?: LoopMode;
+  onToggleLoopMode?: () => void;
   isLooping?: boolean;
   onToggleLoop?: () => void;
+  isMusicMode?: boolean;
+  onToggleMusicMode?: () => void;
   onTimeUpdate: (time: number) => void;
   onDurationChange?: (duration: number) => void;
   onEnded: () => void;
@@ -56,8 +63,12 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
   playbackRate = 1,
   volume = 1,
   isMuted = false,
+  loopMode,
+  onToggleLoopMode,
   isLooping = false,
   onToggleLoop,
+  isMusicMode = false,
+  onToggleMusicMode,
   onTimeUpdate,
   onDurationChange,
   onEnded,
@@ -72,6 +83,8 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
   onUploadMedia,
   onOpenYouTubeModal
 }) => {
+  const activeLoopMode: LoopMode = loopMode || (isLooping ? 'single' : 'off');
+  const handleLoopToggle = onToggleLoopMode || onToggleLoop;
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const youtubeContainerRef = useRef<HTMLDivElement>(null);
@@ -250,7 +263,7 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
             } else if (event.data === 2 && isPlaying) {
               onPlayPause();
             } else if (event.data === 0) {
-              if (isLooping) {
+              if (activeLoopMode === 'single') {
                 try {
                   event.target.seekTo(0, true);
                   event.target.playVideo();
@@ -283,6 +296,17 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
       }
     };
   }, [mediaType, youtubeVideoId]);
+
+  // Adjust YouTube playback quality when Music Mode toggles
+  useEffect(() => {
+    if (ytPlayerRef.current && isYtReadyRef.current) {
+      try {
+        if (isMusicMode) {
+          ytPlayerRef.current.setPlaybackQuality?.('small');
+        }
+      } catch (e) {}
+    }
+  }, [isMusicMode]);
 
   // Sync external currentTime with video element or YouTube player
   useEffect(() => {
@@ -473,18 +497,52 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
 
         {/* Panel Action Buttons: Positioned directly next to title */}
         <div className="flex items-center gap-1.5 bg-slate-950/85 backdrop-blur-md p-1 rounded-xl border border-slate-700/60 shadow-md">
-          {/* Repeat / Loop Playback Button */}
-          {onToggleLoop && (
+          {/* Repeat / Loop Playback Button (Order B: off -> single -> all -> off) */}
+          {handleLoopToggle && (
             <button
-              onClick={onToggleLoop}
-              className={`p-1.5 rounded-lg transition-colors flex items-center justify-center ${
-                isLooping
+              onClick={handleLoopToggle}
+              className={`p-1.5 rounded-lg transition-colors flex items-center justify-center gap-0.5 ${
+                activeLoopMode === 'single'
                   ? 'bg-blue-600/30 text-blue-400 border border-blue-500/40 shadow-sm'
+                  : activeLoopMode === 'all'
+                  ? 'bg-purple-600/30 text-purple-400 border border-purple-500/40 shadow-sm'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
-              title={isLooping ? '重複播放：已開啟 (單曲循環)' : '重複播放：未開啟 (點擊開啟循環)'}
+              title={
+                activeLoopMode === 'single'
+                  ? '重複播放：單曲循環 (點擊切換為全部循環)'
+                  : activeLoopMode === 'all'
+                  ? '重複播放：全部循環 (點擊關閉循環)'
+                  : '重複播放：關閉 (點擊開啟單曲循環)'
+              }
             >
-              <Repeat className="w-3.5 h-3.5" />
+              {activeLoopMode === 'single' ? (
+                <Repeat1 className="w-3.5 h-3.5" />
+              ) : (
+                <Repeat className="w-3.5 h-3.5" />
+              )}
+              {activeLoopMode === 'all' && (
+                <span className="text-[9px] font-bold font-mono">ALL</span>
+              )}
+            </button>
+          )}
+
+          {/* Music Mode (Low Quality / Bandwidth Saver) Button */}
+          {onToggleMusicMode && (
+            <button
+              onClick={onToggleMusicMode}
+              className={`p-1.5 rounded-lg transition-colors flex items-center justify-center ${
+                isMusicMode
+                  ? 'bg-emerald-600/30 text-emerald-400 border border-emerald-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+              title={
+                isMusicMode
+                  ? '音樂模式：已開啟（極低畫質省流中）'
+                  : '音樂模式：關閉（點擊切換為極低畫質音樂模式）'
+              }
+            >
+              <Headphones className="w-3.5 h-3.5" />
             </button>
           )}
 
@@ -540,7 +598,85 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
                 </button>
               </div>
             ) : (
-              <div ref={youtubeContainerRef} className="w-full h-full" />
+              <>
+                <div
+                  ref={youtubeContainerRef}
+                  className={
+                    isMusicMode
+                      ? 'absolute opacity-0 pointer-events-none w-[1px] h-[1px] overflow-hidden'
+                      : 'w-full h-full'
+                  }
+                />
+                {isMusicMode && (
+                  <div className="relative w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 overflow-hidden select-none p-4">
+                    {/* Ambient Glow */}
+                    <div
+                      className="absolute inset-0 bg-cover bg-center opacity-25 blur-3xl scale-125 pointer-events-none"
+                      style={{ backgroundImage: `url(https://img.youtube.com/vi/${youtubeVideoId}/mqdefault.jpg)` }}
+                    />
+
+                    {/* Content Box */}
+                    <div className="relative z-10 flex flex-col items-center gap-3 max-w-sm text-center">
+                      {/* Album / Thumbnail Art */}
+                      <div className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-2xl overflow-hidden shadow-2xl border border-slate-700/80 group">
+                        <img
+                          src={`https://img.youtube.com/vi/${youtubeVideoId}/hqdefault.jpg`}
+                          alt="art"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                          <button
+                            onClick={onPlayPause}
+                            className="w-12 h-12 rounded-full bg-emerald-600/90 hover:bg-emerald-500 text-white flex items-center justify-center shadow-lg transition-transform active:scale-90"
+                            title={isPlaying ? '暫停' : '播放'}
+                          >
+                            {isPlaying ? (
+                              <Pause className="w-5 h-5 fill-current" />
+                            ) : (
+                              <Play className="w-5 h-5 fill-current ml-0.5" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Animated Equalizer Sound Bars */}
+                      <div className="flex items-end justify-center gap-1.5 h-6 my-1">
+                        {[40, 75, 55, 90, 60, 80, 45].map((h, i) => (
+                          <div
+                            key={i}
+                            className="w-1 bg-emerald-400 rounded-full transition-all duration-300"
+                            style={{
+                              height: isPlaying
+                                ? `${Math.max(20, (h * (((Math.floor(currentTime * 4) + i * 17) % 100) + 20)) / 120)}%`
+                                : '20%',
+                              opacity: isPlaying ? 0.9 : 0.4
+                            }}
+                          />
+                        ))}
+                      </div>
+
+                      {/* Badge & Title */}
+                      <div>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 mb-1">
+                          <Headphones className="w-3 h-3" />
+                          音樂省流模式（低畫質）
+                        </span>
+                        <h4 className="font-mono text-xs font-bold text-slate-200 truncate max-w-[240px]">
+                          {youtubeVideoId}
+                        </h4>
+                      </div>
+
+                      {/* Switch back button */}
+                      <button
+                        onClick={onToggleMusicMode}
+                        className="text-[11px] text-slate-400 hover:text-white underline decoration-slate-600 transition-colors pt-0.5"
+                      >
+                        切換回影片畫面
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         ) : mediaType === 'video' && mediaUrl ? (

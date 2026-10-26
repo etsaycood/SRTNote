@@ -7,7 +7,7 @@ import {
   removeYouTubeFromLibrary,
   clearYouTubeLibrary
 } from '../utils/youtubeHelper';
-import { YouTubeHistoryItem } from '../types';
+import { YouTubeHistoryItem, SubtitleItem } from '../types';
 import { YoutubeIcon } from './icons/YoutubeIcon';
 import {
   X,
@@ -18,7 +18,10 @@ import {
   CheckCircle2,
   ListVideo,
   Search,
-  ExternalLink
+  CheckSquare,
+  Square,
+  FileText,
+  Music
 } from 'lucide-react';
 
 interface YouTubeModalProps {
@@ -26,18 +29,25 @@ interface YouTubeModalProps {
   onClose: () => void;
   onLoadYouTube: (url: string, videoId: string) => void;
   currentVideoId?: string;
+  playlistQueue?: string[];
+  onStartPlaylist?: (videoIds: string[]) => void;
+  subtitlesByMedia?: Record<string, SubtitleItem[]>;
 }
 
 export const YouTubeModal: React.FC<YouTubeModalProps> = ({
   isOpen,
   onClose,
   onLoadYouTube,
-  currentVideoId
+  currentVideoId,
+  playlistQueue = [],
+  onStartPlaylist,
+  subtitlesByMedia = {}
 }) => {
   const [inputText, setInputText] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [library, setLibrary] = useState<YouTubeHistoryItem[]>([]);
   const [searchFilter, setSearchFilter] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Reload stored library whenever modal opens
   useEffect(() => {
@@ -46,8 +56,14 @@ export const YouTubeModal: React.FC<YouTubeModalProps> = ({
       setErrorMsg('');
       setInputText('');
       setSearchFilter('');
+      // Initialize selected with current playlist queue if available
+      if (playlistQueue && playlistQueue.length > 0) {
+        setSelectedIds(new Set(playlistQueue));
+      } else {
+        setSelectedIds(new Set());
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, playlistQueue]);
 
   // Parse all valid YouTube links from input text
   const detectedVideos = useMemo(() => {
@@ -70,6 +86,15 @@ export const YouTubeModal: React.FC<YouTubeModalProps> = ({
     const updated = saveMultipleYouTubeToLibrary(detectedVideos);
     setLibrary(updated);
 
+    // If multiple videos were pasted, automatically select them for playlist
+    if (detectedVideos.length > 1 && onStartPlaylist) {
+      const ids = detectedVideos.map((v) => v.videoId);
+      onStartPlaylist(ids);
+      setInputText('');
+      onClose();
+      return;
+    }
+
     // Load first video into workspace
     const first = detectedVideos[0];
     onLoadYouTube(first.url, first.videoId);
@@ -90,7 +115,7 @@ export const YouTubeModal: React.FC<YouTubeModalProps> = ({
     setErrorMsg('');
   };
 
-  // Handler: Play a specific video from library
+  // Handler: Play a specific single video from library
   const handlePlayFromLibrary = (item: YouTubeHistoryItem) => {
     onLoadYouTube(item.url, item.id);
     onClose();
@@ -101,6 +126,11 @@ export const YouTubeModal: React.FC<YouTubeModalProps> = ({
     e.stopPropagation();
     const updated = removeYouTubeFromLibrary(id);
     setLibrary(updated);
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
   };
 
   // Handler: Clear all library items
@@ -108,7 +138,41 @@ export const YouTubeModal: React.FC<YouTubeModalProps> = ({
     if (window.confirm('確定要清空所有已存的 YouTube 影片紀錄嗎？')) {
       clearYouTubeLibrary();
       setLibrary([]);
+      setSelectedIds(new Set());
     }
+  };
+
+  // Toggle selection for playlist
+  const toggleSelect = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  // Select all or deselect all
+  const handleSelectAll = () => {
+    if (selectedIds.size === library.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(library.map((x) => x.id)));
+    }
+  };
+
+  // Start playlist rotation with selected videos
+  const handleStartSelectedPlaylist = () => {
+    if (selectedIds.size === 0) return;
+    const ids = library.filter((item) => selectedIds.has(item.id)).map((item) => item.id);
+    if (onStartPlaylist) {
+      onStartPlaylist(ids);
+    }
+    onClose();
   };
 
   // Filter library by search query
@@ -132,7 +196,7 @@ export const YouTubeModal: React.FC<YouTubeModalProps> = ({
             </div>
             <div>
               <h3 className="text-sm font-bold text-white">YouTube 影片庫與多連結管理</h3>
-              <p className="text-[11px] text-slate-400">支援單筆或多行貼上，記錄儲存於瀏覽器，不增加設定檔大小</p>
+              <p className="text-[11px] text-slate-400">支援單筆/多行貼上、多片勾選輪播，紀錄存於瀏覽器</p>
             </div>
           </div>
 
@@ -192,7 +256,9 @@ export const YouTubeModal: React.FC<YouTubeModalProps> = ({
                         : `共辨識出 ${detectedVideos.length} 部影片，首部為: ${detectedVideos[0].videoId}`}
                     </p>
                     <p className="text-[11px] text-slate-400 truncate">
-                      所有辨識到的影片都將自動加入下方瀏覽器歷史清單
+                      {detectedVideos.length > 1
+                        ? '按「立即載入播放」將自動建立多影片輪播佇列並存入清單'
+                        : '影片將自動加入下方瀏覽器歷史清單'}
                     </p>
                   </div>
                 </div>
@@ -220,10 +286,14 @@ export const YouTubeModal: React.FC<YouTubeModalProps> = ({
                 type="submit"
                 disabled={detectedVideos.length === 0}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white shadow-lg shadow-red-600/30 transition-all active:scale-95"
-                title="載入第一部影片至工作台，並將所有連結儲存至清單"
+                title={
+                  detectedVideos.length > 1
+                    ? '載入首部並開始輪播所有輸入影片'
+                    : '載入影片至工作台，並將連結儲存至清單'
+                }
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
-                <span>立即載入播放</span>
+                <span>{detectedVideos.length > 1 ? '載入並開始輪播' : '立即載入播放'}</span>
               </button>
             </div>
           </form>
@@ -234,23 +304,36 @@ export const YouTubeModal: React.FC<YouTubeModalProps> = ({
           {/* Lower Section: Stored YouTube Library / Browser History */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
                 <ListVideo className="w-4 h-4 text-red-400" />
                 <span>已存影片紀錄</span>
                 <span className="text-[10px] text-slate-500 font-mono">({library.length})</span>
+
+                {/* Batch Selection Controls */}
+                {library.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleSelectAll}
+                    className="ml-2 text-[11px] text-blue-400 hover:text-blue-300 font-normal transition-colors"
+                  >
+                    {selectedIds.size === library.length ? '取消全選' : '全選'}
+                  </button>
+                )}
               </div>
 
-              {library.length > 0 && (
-                <button
-                  type="button"
-                  onClick={handleClearAll}
-                  className="text-[11px] text-slate-500 hover:text-rose-400 transition-colors flex items-center gap-1"
-                  title="清空瀏覽器中的所有 YouTube 影片紀錄"
-                >
-                  <Trash2 className="w-3 h-3" />
-                  <span>清空紀錄</span>
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {library.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearAll}
+                    className="text-[11px] text-slate-500 hover:text-rose-400 transition-colors flex items-center gap-1"
+                    title="清空瀏覽器中的所有 YouTube 影片紀錄"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    <span>清空紀錄</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Quick Filter Search if library has items */}
@@ -278,6 +361,10 @@ export const YouTubeModal: React.FC<YouTubeModalProps> = ({
               <div className="space-y-1.5 max-h-56 overflow-y-auto custom-scrollbar pr-0.5">
                 {filteredLibrary.map((item) => {
                   const isCurrent = currentVideoId === item.id;
+                  const isSelected = selectedIds.has(item.id);
+                  const hasSrt = subtitlesByMedia[item.id] && subtitlesByMedia[item.id].length > 0;
+                  const queueIndex = playlistQueue.indexOf(item.id);
+
                   return (
                     <div
                       key={item.id}
@@ -285,11 +372,28 @@ export const YouTubeModal: React.FC<YouTubeModalProps> = ({
                       className={`group flex items-center justify-between p-2 rounded-xl border transition-all cursor-pointer ${
                         isCurrent
                           ? 'bg-red-950/30 border-red-500/50 ring-1 ring-red-500/30'
+                          : isSelected
+                          ? 'bg-blue-950/25 border-blue-600/40'
                           : 'bg-slate-950/60 hover:bg-slate-800/80 border-slate-800/80'
                       }`}
                     >
-                      {/* Left: Thumbnail & Info */}
+                      {/* Left: Checkbox + Thumbnail + Info */}
                       <div className="flex items-center gap-2.5 min-w-0">
+                        {/* Checkbox for playlist rotation */}
+                        <button
+                          type="button"
+                          onClick={(e) => toggleSelect(e, item.id)}
+                          className="p-1 rounded text-slate-400 hover:text-white transition-colors flex-shrink-0"
+                          title={isSelected ? '取消勾選' : '勾選此部加入輪播清單'}
+                        >
+                          {isSelected ? (
+                            <CheckSquare className="w-4 h-4 text-blue-400 fill-blue-950/50" />
+                          ) : (
+                            <Square className="w-4 h-4 text-slate-600 hover:text-slate-400" />
+                          )}
+                        </button>
+
+                        {/* Thumbnail */}
                         <div className="relative w-16 h-10 rounded-lg overflow-hidden bg-slate-900 border border-slate-700/60 flex-shrink-0">
                           <img
                             src={`https://img.youtube.com/vi/${item.id}/mqdefault.jpg`}
@@ -302,14 +406,29 @@ export const YouTubeModal: React.FC<YouTubeModalProps> = ({
                           </div>
                         </div>
 
+                        {/* Details */}
                         <div className="min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="font-mono text-xs font-semibold text-slate-200 truncate">
                               {item.id}
                             </span>
                             {isCurrent && (
                               <span className="text-[10px] font-bold text-red-400 bg-red-950/80 px-1.5 py-0.2 rounded border border-red-800/60">
                                 播放中
+                              </span>
+                            )}
+                            {queueIndex !== -1 && (
+                              <span className="text-[10px] font-mono text-blue-300 bg-blue-950/80 px-1.5 py-0.2 rounded border border-blue-800/50">
+                                輪播 #{queueIndex + 1}
+                              </span>
+                            )}
+                            {hasSrt && (
+                              <span
+                                className="text-[10px] font-semibold text-emerald-400 bg-emerald-950/70 px-1.5 py-0.2 rounded border border-emerald-800/40 flex items-center gap-0.5"
+                                title="此影片已對應專屬 SRT 字幕"
+                              >
+                                <FileText className="w-2.5 h-2.5" />
+                                SRT ({subtitlesByMedia[item.id].length})
                               </span>
                             )}
                           </div>
@@ -340,9 +459,23 @@ export const YouTubeModal: React.FC<YouTubeModalProps> = ({
 
         {/* Modal Footer */}
         <div className="px-5 py-3 border-t border-slate-800 flex items-center justify-between bg-slate-950/60 text-xs flex-shrink-0">
-          <span className="text-[11px] text-slate-500">
-            已存影片不會寫入專案設定檔，隨選即播且不佔用檔案容量
-          </span>
+          <div className="flex items-center gap-2">
+            {selectedIds.size > 0 ? (
+              <button
+                type="button"
+                onClick={handleStartSelectedPlaylist}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30 transition-all active:scale-95"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>輪播勾選影片 ({selectedIds.size} 部)</span>
+              </button>
+            ) : (
+              <span className="text-[11px] text-slate-500">
+                勾選多部影片可直接進行輪播
+              </span>
+            )}
+          </div>
+
           <button
             type="button"
             onClick={onClose}
