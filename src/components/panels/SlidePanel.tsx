@@ -14,7 +14,9 @@ import {
   Edit3,
   GripVertical,
   Loader2,
-  FileText
+  FileText,
+  Link2,
+  Unlink
 } from 'lucide-react';
 
 interface SlidePanelProps {
@@ -31,6 +33,9 @@ interface SlidePanelProps {
   isConvertingPdf?: boolean;
   pdfProgress?: string;
   onDropFiles?: (files: FileList) => void;
+  isSlideSyncEnabled?: boolean;
+  onToggleSlideSync?: () => void;
+  currentMediaId?: string;
 }
 
 export const SlidePanel: React.FC<SlidePanelProps> = ({
@@ -46,7 +51,10 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
   onUploadSlides,
   isConvertingPdf = false,
   pdfProgress = '',
-  onDropFiles
+  onDropFiles,
+  isSlideSyncEnabled = true,
+  onToggleSlideSync,
+  currentMediaId
 }) => {
   const [isDragOverFile, setIsDragOverFile] = useState(false);
   const currentSlide = slides[currentSlideIndex] || slides[0];
@@ -193,7 +201,9 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
             <div className="w-16 h-16 rounded-2xl bg-slate-800/80 border border-slate-700 flex items-center justify-center mb-4 text-blue-400">
               <Presentation className="w-8 h-8" />
             </div>
-            <h4 className="font-semibold text-slate-200 mb-1">未載入簡報 (可有可無)</h4>
+            <h4 className="font-semibold text-slate-200 mb-1">
+              {currentMediaId ? `尚未為影片 (${currentMediaId}) 上傳簡報` : '未載入簡報'}
+            </h4>
             <p className="text-xs text-slate-400 mb-4">
               支援上傳 <strong>PDF 簡報檔案</strong> 或投影片圖片，系統將在播放到指定時間自動翻頁同步。
             </p>
@@ -204,9 +214,15 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
           </div>
         )}
 
-        {/* Floating Quick Navigation & Timestamp Controller */}
+        {/* Floating Quick Navigation & Timestamp Controller (Option B) */}
         {hasSlides && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-700/80 shadow-2xl opacity-0 group-hover:opacity-100 transition-all duration-300">
+          <div
+            className={`absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-700/80 shadow-2xl transition-all duration-300 ${
+              !isSlideSyncEnabled
+                ? 'opacity-100 ring-1 ring-amber-500/40'
+                : 'opacity-90 sm:opacity-0 sm:group-hover:opacity-100'
+            }`}
+          >
             <button
               onClick={handlePrev}
               disabled={currentSlideIndex === 0}
@@ -228,6 +244,34 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
             >
               <ChevronRight className="w-4 h-4" />
             </button>
+
+            <div className="w-px h-3.5 bg-slate-700 mx-1"></div>
+
+            {/* Option B: Pause Slide Sync Toggle Button */}
+            {onToggleSlideSync && (
+              <button
+                type="button"
+                onClick={onToggleSlideSync}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${
+                  isSlideSyncEnabled
+                    ? 'bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300'
+                    : 'bg-amber-500/25 hover:bg-amber-500/35 border border-amber-500/50 text-amber-300 font-semibold shadow-sm'
+                }`}
+                title={isSlideSyncEnabled ? '簡報隨影音時間自動同步中，點擊可暫停同步' : '簡報已暫停同步，點擊恢復隨影音時間自動翻頁'}
+              >
+                {isSlideSyncEnabled ? (
+                  <>
+                    <Link2 className="w-3 h-3 text-emerald-400" />
+                    <span>同步中</span>
+                  </>
+                ) : (
+                  <>
+                    <Unlink className="w-3 h-3 text-amber-400" />
+                    <span>暫停同步</span>
+                  </>
+                )}
+              </button>
+            )}
 
             <div className="w-px h-3.5 bg-slate-700 mx-1"></div>
 

@@ -55,9 +55,10 @@ export interface ProjectConfig {
   mediaDuration: number;
   subtitles: SubtitleItem[];
   subtitlesByMedia?: Record<string, SubtitleItem[]>;
+  slides: SlideItem[];
+  slidesByMedia?: Record<string, SlideItem[]>;
   playlistVideoIds?: string[];
   loopMode?: LoopMode;
-  slides: SlideItem[];
   aiSummary: string;
   aiKeyPoints: { time: number; label: string; description: string }[];
   updatedAt: string;

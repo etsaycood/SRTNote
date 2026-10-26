@@ -8,7 +8,7 @@ import {
   clearYouTubeLibrary,
   saveCustomLibraryOrder
 } from '../utils/youtubeHelper';
-import { YouTubeHistoryItem, SubtitleItem } from '../types';
+import { YouTubeHistoryItem, SubtitleItem, SlideItem } from '../types';
 import { YoutubeIcon } from './icons/YoutubeIcon';
 import {
   X,
@@ -24,7 +24,8 @@ import {
   FileText,
   GripVertical,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  Presentation
 } from 'lucide-react';
 
 interface YouTubeModalProps {
@@ -35,6 +36,7 @@ interface YouTubeModalProps {
   playlistQueue?: string[];
   onStartPlaylist?: (videoIds: string[]) => void;
   subtitlesByMedia?: Record<string, SubtitleItem[]>;
+  slidesByMedia?: Record<string, SlideItem[]>;
 }
 
 export const YouTubeModal: React.FC<YouTubeModalProps> = ({
@@ -44,7 +46,8 @@ export const YouTubeModal: React.FC<YouTubeModalProps> = ({
   currentVideoId,
   playlistQueue = [],
   onStartPlaylist,
-  subtitlesByMedia = {}
+  subtitlesByMedia = {},
+  slidesByMedia = {}
 }) => {
   const [inputText, setInputText] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -426,6 +429,7 @@ export const YouTubeModal: React.FC<YouTubeModalProps> = ({
                   const isCurrent = currentVideoId === item.id;
                   const isSelected = selectedIds.has(item.id);
                   const hasSrt = subtitlesByMedia[item.id] && subtitlesByMedia[item.id].length > 0;
+                  const hasSlides = slidesByMedia[item.id] && slidesByMedia[item.id].length > 0;
                   const queueIndex = playlistQueue.indexOf(item.id);
                   const isDragging = draggedIndex === index;
                   const isDragOver = dragOverIndex === index;
@@ -514,6 +518,15 @@ export const YouTubeModal: React.FC<YouTubeModalProps> = ({
                               >
                                 <FileText className="w-2.5 h-2.5" />
                                 SRT ({subtitlesByMedia[item.id].length})
+                              </span>
+                            )}
+                            {hasSlides && (
+                              <span
+                                className="text-[10px] font-semibold text-blue-400 bg-blue-950/70 px-1.5 py-0.2 rounded border border-blue-800/40 flex items-center gap-0.5"
+                                title="此影片已對應專屬簡報投影片"
+                              >
+                                <Presentation className="w-2.5 h-2.5" />
+                                簡報 ({slidesByMedia[item.id].length})
                               </span>
                             )}
                           </div>

@@ -43,6 +43,9 @@ export default function App() {
   const [subtitles, setSubtitles] = useState<SubtitleItem[]>(SAMPLE_PROJECT.subtitles);
   const [subtitlesByMedia, setSubtitlesByMedia] = useState<Record<string, SubtitleItem[]>>({});
   const [slides, setSlides] = useState<SlideItem[]>(SAMPLE_PROJECT.slides);
+  const [slidesByMedia, setSlidesByMedia] = useState<Record<string, SlideItem[]>>({});
+  const [isSlideSyncEnabled, setIsSlideSyncEnabled] = useState<boolean>(true);
+  const [manualSlideIndex, setManualSlideIndex] = useState<number>(0);
   const [aiSummary, setAiSummary] = useState<string>(SAMPLE_PROJECT.aiSummary);
 
   // PDF Conversion State
@@ -65,6 +68,13 @@ export default function App() {
   const [loopMode, setLoopMode] = useState<LoopMode>('off');
   const [playlistQueue, setPlaylistQueue] = useState<string[]>([]);
   const [currentPlaylistIndex, setCurrentPlaylistIndex] = useState(0);
+
+  const playlistQueueRef = useRef(playlistQueue);
+  playlistQueueRef.current = playlistQueue;
+  const currentPlaylistIndexRef = useRef(currentPlaylistIndex);
+  currentPlaylistIndexRef.current = currentPlaylistIndex;
+  const loopModeRef = useRef(loopMode);
+  loopModeRef.current = loopMode;
 
   // --- Selected A-B Time Range State ---
   const [timeRange, setTimeRange] = useState<TimeRange>({
@@ -289,7 +299,7 @@ export default function App() {
   };
 
   // --- Compute current active Slide ---
-  const currentSlideIndex = useMemo(() => {
+  const autoSlideIndex = useMemo(() => {
     if (!slides || slides.length === 0) return 0;
     let foundIndex = 0;
     for (let i = 0; i < slides.length; i++) {
@@ -301,6 +311,22 @@ export default function App() {
     }
     return foundIndex;
   }, [slides, currentTime]);
+
+  // Keep manualSlideIndex in sync with autoSlideIndex when sync is enabled
+  useEffect(() => {
+    if (isSlideSyncEnabled) {
+      setManualSlideIndex(autoSlideIndex);
+    }
+  }, [isSlideSyncEnabled, autoSlideIndex]);
+
+  const currentSlideIndex = isSlideSyncEnabled ? autoSlideIndex : manualSlideIndex;
+
+  const handleSelectSlide = (idx: number) => {
+    setManualSlideIndex(idx);
+    if (isSlideSyncEnabled && slides[idx]) {
+      handleSeek(slides[idx].timestamp);
+    }
+  };
 
   // --- Compute current active Subtitle ---
   const activeSubtitle = useMemo(() => {
@@ -317,6 +343,28 @@ export default function App() {
         idx === currentSlideIndex ? { ...s, timestamp: Math.floor(currentTime) } : s
       );
       setSlides(updated);
+      if (mediaType === 'youtube' && mediaUrl) {
+        const vid = extractYouTubeId(mediaUrl);
+        if (vid) {
+          setSlidesByMedia((prev) => ({
+            ...prev,
+            [vid]: updated
+          }));
+        }
+      }
+    }
+  };
+
+  const handleUpdateSlides = (newSlides: SlideItem[]) => {
+    setSlides(newSlides);
+    if (mediaType === 'youtube' && mediaUrl) {
+      const vid = extractYouTubeId(mediaUrl);
+      if (vid) {
+        setSlidesByMedia((prev) => ({
+          ...prev,
+          [vid]: newSlides
+        }));
+      }
     }
   };
 
@@ -334,7 +382,9 @@ export default function App() {
         const c = data.config;
         if (c.title) setProjectTitle(c.title);
         if (c.subtitles) setSubtitles(c.subtitles);
+        if (c.subtitlesByMedia) setSubtitlesByMedia(c.subtitlesByMedia);
         if (c.slides) setSlides(c.slides);
+        if (c.slidesByMedia) setSlidesByMedia(c.slidesByMedia);
         if (c.aiSummary) setAiSummary(c.aiSummary);
         if (c.mediaDuration) setDuration(c.mediaDuration);
       }
@@ -422,9 +472,13 @@ export default function App() {
         ...subtitlesByMedia,
         ...(activeYtId ? { [activeYtId]: subtitles } : {})
       },
+      slides,
+      slidesByMedia: {
+        ...slidesByMedia,
+        ...(activeYtId ? { [activeYtId]: slides } : {})
+      },
       playlistVideoIds: playlistQueue.length > 0 ? playlistQueue : undefined,
       loopMode,
-      slides,
       aiSummary,
       aiKeyPoints: [],
       updatedAt: new Date().toISOString()
@@ -460,13 +514,17 @@ export default function App() {
 
   // --- YouTube Loader Handler ---
   const handleLoadYouTube = (url: string, videoId: string, autoPlay: boolean = false) => {
-    // Cache current subtitles for previous YouTube video before switching
+    // Cache current subtitles and slides for previous YouTube video before switching
     if (mediaType === 'youtube' && mediaUrl) {
       const prevId = extractYouTubeId(mediaUrl);
       if (prevId) {
         setSubtitlesByMedia((prev) => ({
           ...prev,
           [prevId]: subtitles
+        }));
+        setSlidesByMedia((prev) => ({
+          ...prev,
+          [prevId]: slides
         }));
       }
     }
@@ -489,6 +547,14 @@ export default function App() {
       setSubtitles([]);
     }
 
+    // Slide sync with media: If slides exist for new videoId, switch to them; else clear slides
+    const existingSlides = slidesByMedia[videoId];
+    if (existingSlides && existingSlides.length > 0) {
+      setSlides(existingSlides);
+    } else {
+      setSlides([]);
+    }
+
     if (projectTitle === SAMPLE_PROJECT.title || projectTitle.startsWith('YouTube:')) {
       setProjectTitle(`YouTube: ${videoId}`);
     }
@@ -498,35 +564,43 @@ export default function App() {
   const handleStartPlaylist = (videoIds: string[]) => {
     if (!videoIds || videoIds.length === 0) return;
     setPlaylistQueue(videoIds);
+    playlistQueueRef.current = videoIds;
     setCurrentPlaylistIndex(0);
+    currentPlaylistIndexRef.current = 0;
     const firstId = videoIds[0];
     handleLoadYouTube(`https://www.youtube.com/watch?v=${firstId}`, firstId, true);
   };
 
   // --- Playback Ended Handler (Single Loop vs All Loop vs Next in Playlist) ---
   const handleEnded = () => {
-    if (loopMode === 'single') {
+    const queue = playlistQueueRef.current;
+    const curIdx = currentPlaylistIndexRef.current;
+    const curLoop = loopModeRef.current;
+
+    if (curLoop === 'single') {
       handleSeek(timeRange.enabled ? timeRange.start : 0);
       setIsPlaying(true);
       return;
     }
 
     // If there is an active playlist, seamlessly advance and autoplay next video
-    if (playlistQueue.length > 0) {
-      const nextIndex = currentPlaylistIndex + 1;
-      if (nextIndex < playlistQueue.length) {
+    if (queue.length > 0) {
+      const nextIndex = curIdx + 1;
+      if (nextIndex < queue.length) {
         setCurrentPlaylistIndex(nextIndex);
-        const nextId = playlistQueue[nextIndex];
+        currentPlaylistIndexRef.current = nextIndex;
+        const nextId = queue[nextIndex];
         handleLoadYouTube(`https://www.youtube.com/watch?v=${nextId}`, nextId, true);
         return;
-      } else if (loopMode === 'all') {
+      } else if (curLoop === 'all') {
         // Loop back to beginning of playlist and autoplay
         setCurrentPlaylistIndex(0);
-        const firstId = playlistQueue[0];
+        currentPlaylistIndexRef.current = 0;
+        const firstId = queue[0];
         handleLoadYouTube(`https://www.youtube.com/watch?v=${firstId}`, firstId, true);
         return;
       }
-    } else if (loopMode === 'all') {
+    } else if (curLoop === 'all') {
       handleSeek(timeRange.enabled ? timeRange.start : 0);
       setIsPlaying(true);
       return;
@@ -627,6 +701,15 @@ export default function App() {
         if (pdfSlides.length > 0) {
           revokeSlideUrls(slides);
           setSlides(pdfSlides);
+          if (mediaType === 'youtube' && mediaUrl) {
+            const vid = extractYouTubeId(mediaUrl);
+            if (vid) {
+              setSlidesByMedia((prev) => ({
+                ...prev,
+                [vid]: pdfSlides
+              }));
+            }
+          }
         }
       } catch (err: any) {
         alert(err.message || 'PDF 解析失敗');
@@ -654,6 +737,15 @@ export default function App() {
         imageUrl: URL.createObjectURL(f)
       }));
       setSlides(newSlides);
+      if (mediaType === 'youtube' && mediaUrl) {
+        const vid = extractYouTubeId(mediaUrl);
+        if (vid) {
+          setSlidesByMedia((prev) => ({
+            ...prev,
+            [vid]: newSlides
+          }));
+        }
+      }
     } else {
       alert('請上傳 PDF 簡報檔案或投影片圖片 (PNG, JPG, WebP)');
     }
@@ -685,6 +777,7 @@ export default function App() {
             revokeSlideUrls(slides);
             setSlides(parsed.slides);
           }
+          if (parsed.slidesByMedia) setSlidesByMedia(parsed.slidesByMedia);
           if (parsed.aiSummary) setAiSummary(parsed.aiSummary);
           if (parsed.mediaDuration) setDuration(parsed.mediaDuration);
         } catch (err) {
@@ -708,6 +801,8 @@ export default function App() {
     setCurrentPlaylistIndex(0);
     setLoopMode('off');
     setSlides(SAMPLE_PROJECT.slides);
+    setSlidesByMedia({});
+    setIsSlideSyncEnabled(true);
     setAiSummary(SAMPLE_PROJECT.aiSummary);
     setDuration(SAMPLE_PROJECT.mediaDuration);
     setCurrentTime(0);
@@ -822,9 +917,7 @@ export default function App() {
             slides={slides}
             currentSlideIndex={currentSlideIndex}
             currentTime={currentTime}
-            onSelectSlide={(idx) => {
-              if (slides[idx]) handleSeek(slides[idx].timestamp);
-            }}
+            onSelectSlide={handleSelectSlide}
             onSyncCurrentTime={handleSyncSlideCurrentTime}
             onOpenTimelineModal={() => setIsSlideModalOpen(true)}
             isMaximized={activeMaximizedPanel === 'slides'}
@@ -834,6 +927,9 @@ export default function App() {
             isConvertingPdf={isConvertingPdf}
             pdfProgress={pdfProgress}
             onDropFiles={processSlideFiles}
+            isSlideSyncEnabled={isSlideSyncEnabled}
+            onToggleSlideSync={() => setIsSlideSyncEnabled((prev) => !prev)}
+            currentMediaId={mediaType === 'youtube' && mediaUrl ? extractYouTubeId(mediaUrl) || undefined : undefined}
           />
         );
 
@@ -974,7 +1070,7 @@ export default function App() {
         slides={slides}
         currentTime={currentTime}
         duration={duration}
-        onUpdateSlides={setSlides}
+        onUpdateSlides={handleUpdateSlides}
         onSeek={handleSeek}
       />
 
@@ -987,6 +1083,7 @@ export default function App() {
         playlistQueue={playlistQueue}
         onStartPlaylist={handleStartPlaylist}
         subtitlesByMedia={subtitlesByMedia}
+        slidesByMedia={slidesByMedia}
       />
 
       {/* 7. Paste Transcript Modal */}

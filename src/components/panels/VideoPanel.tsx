@@ -86,6 +86,16 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
   const isYtReadyRef = useRef<boolean>(false);
   const [ytError, setYtError] = useState<string | null>(null);
 
+  const onEndedRef = useRef(onEnded);
+  onEndedRef.current = onEnded;
+  const onPlayPauseRef = useRef(onPlayPause);
+  onPlayPauseRef.current = onPlayPause;
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
+  const activeLoopModeRef = useRef(activeLoopMode);
+  activeLoopModeRef.current = activeLoopMode;
+  const hasEndedFiredRef = useRef(false);
+
   // Auto-hiding in-video overlay controls state & timer
   const [showControls, setShowControls] = useState(true);
   const hideTimerRef = useRef<number | null>(null);
@@ -224,9 +234,13 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
       currentVideoIdRef.current !== youtubeVideoId
     ) {
       currentVideoIdRef.current = youtubeVideoId;
+      hasEndedFiredRef.current = false;
       try {
         if (isPlaying) {
           ytPlayerRef.current.loadVideoById(youtubeVideoId, 0);
+          try {
+            ytPlayerRef.current.playVideo();
+          } catch (e) {}
         } else {
           ytPlayerRef.current.cueVideoById(youtubeVideoId, 0);
         }
@@ -241,6 +255,7 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
     }
 
     currentVideoIdRef.current = youtubeVideoId;
+    hasEndedFiredRef.current = false;
     let isMounted = true;
     setYtError(null);
 
@@ -283,18 +298,21 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
           onStateChange: (event: any) => {
             if (!isMounted) return;
             // YT.PlayerState: PLAYING=1, PAUSED=2, ENDED=0
-            if (event.data === 1 && !isPlaying) {
-              onPlayPause();
-            } else if (event.data === 2 && isPlaying) {
-              onPlayPause();
+            if (event.data === 1 && !isPlayingRef.current) {
+              onPlayPauseRef.current();
+            } else if (event.data === 2 && isPlayingRef.current) {
+              onPlayPauseRef.current();
             } else if (event.data === 0) {
-              if (activeLoopMode === 'single') {
-                try {
-                  event.target.seekTo(0, true);
-                  event.target.playVideo();
-                } catch (e) {}
+              if (!hasEndedFiredRef.current) {
+                hasEndedFiredRef.current = true;
+                if (activeLoopModeRef.current === 'single') {
+                  try {
+                    event.target.seekTo(0, true);
+                    event.target.playVideo();
+                  } catch (e) {}
+                }
+                onEndedRef.current();
               }
-              onEnded();
             }
           },
           onError: () => {
@@ -381,6 +399,20 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
           const d = ytPlayerRef.current.getDuration();
           if (d && typeof d === 'number' && !isNaN(d) && Math.abs(d - duration) > 1) {
             onDurationChange?.(d);
+          }
+
+          // Double insurance: If video is near the end (within 0.45s) and onStateChange didn't fire
+          if (d > 0 && typeof t === 'number' && t >= d - 0.45 && !hasEndedFiredRef.current) {
+            hasEndedFiredRef.current = true;
+            if (activeLoopModeRef.current === 'single') {
+              try {
+                ytPlayerRef.current.seekTo(0, true);
+                ytPlayerRef.current.playVideo();
+              } catch (e) {}
+            }
+            onEndedRef.current();
+          } else if (d > 0 && typeof t === 'number' && t < d - 2) {
+            hasEndedFiredRef.current = false;
           }
         } catch (e) {}
       }
