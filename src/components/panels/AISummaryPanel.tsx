@@ -68,6 +68,7 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showToolsMenu, setShowToolsMenu] = useState(false);
+  const [showAIGenerateModal, setShowAIGenerateModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -75,6 +76,7 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
   const [activeMarker, setActiveMarker] = useState<'start' | 'end' | null>(null);
   const [startInputText, setStartInputText] = useState(formatTime(timeRange.start, duration >= 3600));
   const [endInputText, setEndInputText] = useState(formatTime(timeRange.end, duration >= 3600));
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   useEffect(() => {
     setStartInputText(formatTime(timeRange.start, duration >= 3600));
@@ -83,6 +85,19 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
   useEffect(() => {
     setEndInputText(formatTime(timeRange.end, duration >= 3600));
   }, [timeRange.end, duration]);
+
+  // Elapsed timer while generating
+  useEffect(() => {
+    let timer: number;
+    if (isGenerating) {
+      timer = window.setInterval(() => {
+        setElapsedSeconds((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setElapsedSeconds(0);
+    }
+    return () => clearInterval(timer);
+  }, [isGenerating]);
 
   const handleScenarioChange = (newPresetId: string) => {
     const preset = getPromptPreset(newPresetId);
@@ -95,37 +110,32 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
     }
   };
 
-  // Compute subtitles for analysis (either full video or filtered by selected range)
-  const { activeSubtitles, startIndex, endIndex } = useMemo(() => {
-    if (!timeRange || !timeRange.enabled) {
-      return {
-        activeSubtitles: subtitles,
-        startIndex: subtitles.length > 0 ? 1 : 0,
-        endIndex: subtitles.length
-      };
+  // Compute subtitles and total characters for analysis (either full video or filtered by selected range)
+  const { activeSubtitles, totalChars } = useMemo(() => {
+    let list = subtitles;
+    if (timeRange && timeRange.enabled) {
+      const minT = Math.min(timeRange.start, timeRange.end);
+      const maxT = Math.max(timeRange.start, timeRange.end);
+      const filtered = subtitles.filter((s) => s.startTime >= minT && s.startTime <= maxT);
+      if (filtered.length > 0) list = filtered;
     }
-    const minT = Math.min(timeRange.start, timeRange.end);
-    const maxT = Math.max(timeRange.start, timeRange.end);
-    let firstIdx = -1;
-    let lastIdx = -1;
-    const filtered = subtitles.filter((s, idx) => {
-      const match = s.startTime >= minT && s.startTime <= maxT;
-      if (match) {
-        if (firstIdx === -1) firstIdx = idx + 1;
-        lastIdx = idx + 1;
-      }
-      return match;
-    });
+    const chars = list.reduce((acc, cur) => acc + (cur.text?.length || 0), 0);
     return {
-      activeSubtitles: filtered.length > 0 ? filtered : subtitles,
-      startIndex: firstIdx > 0 ? firstIdx : 1,
-      endIndex: lastIdx > 0 ? lastIdx : subtitles.length
+      activeSubtitles: list,
+      totalChars: chars
     };
   }, [subtitles, timeRange]);
 
+  // Estimated generation time in seconds based on subtitles count and characters
+  const estimatedSeconds = useMemo(() => {
+    const baseOverhead = 5;
+    const contentTime = Math.round(totalChars / 35 + activeSubtitles.length * 0.25);
+    return Math.max(8, Math.min(60, baseOverhead + contentTime));
+  }, [totalChars, activeSubtitles.length]);
+
   const rangeDuration = Math.max(0, timeRange.end - timeRange.start);
 
-  // Stop Generation handler
+  // Stop Generation handler (點擊終止)
   const handleStopGeneration = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort(new Error('使用者手動停止生成'));
@@ -137,10 +147,11 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
   // Trigger AI API streaming generation
   const handleGenerateAI = async () => {
     setIsGenerating(true);
+    setElapsedSeconds(0);
     const rangeLabel = timeRange.enabled
       ? `區間 [${formatTime(timeRange.start, duration >= 3600)} ~ ${formatTime(timeRange.end, duration >= 3600)}]`
       : '全片';
-    setStatusText(`正在連線 API 伺服器，準備分析${rangeLabel} (共 ${activeSubtitles.length} 句)...`);
+    setStatusText(`正在連線 API 伺服器，準備分析${rangeLabel} (共 ${activeSubtitles.length} 句，約 ${totalChars} 字)...`);
     setErrorMessage(null);
     setIsEditing(false);
 
@@ -316,25 +327,37 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
 
         {/* Action Controls (Placed directly next to title) */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          {/* Main AI Generate / Stop Button */}
+          {/* Main AI Generate / Terminate Button */}
           {isGenerating ? (
             <button
               onClick={handleStopGeneration}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-600/30 transition-all active:scale-95 animate-pulse"
-              title="停止 AI 生成"
+              className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-600/30 transition-all active:scale-95 animate-pulse"
+              title="點擊以終止 AI 生成"
             >
               <Square className="w-3.5 h-3.5 fill-current" />
-              <span>停止</span>
+              <span>終止 ({elapsedSeconds}s / ~{estimatedSeconds}s)</span>
             </button>
           ) : (
             <button
-              onClick={handleGenerateAI}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all shadow-md active:scale-95 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-600/25"
-              title={timeRange.enabled ? '呼叫 AI 產生區間重點整理' : '呼叫 AI 產生全片重點整理'}
+              onClick={() => setShowAIGenerateModal(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all shadow-md active:scale-95 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-600/25"
+              title="開啟 AI 重點整理（選擇提示範本、區間或全部、預計時間）"
             >
               <Wand2 className="w-3.5 h-3.5" />
               <span>AI</span>
+              <ChevronDown className="w-3 h-3 text-purple-200" />
             </button>
+          )}
+
+          {/* Active Range Badge */}
+          {timeRange.enabled && !isGenerating && (
+            <span
+              onClick={() => setShowAIGenerateModal(true)}
+              className="cursor-pointer text-[10px] px-2 py-0.5 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 font-mono hover:bg-purple-500/25 transition-colors"
+              title="已啟用自訂區間，點擊調整"
+            >
+              區間 {formatTime(timeRange.start, duration >= 3600)}~{formatTime(timeRange.end, duration >= 3600)}
+            </span>
           )}
 
           {/* Copy Button */}
@@ -458,181 +481,37 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
         </div>
       </div>
 
-      {/* Sub-toolbar: Compact Single Row */}
-      <div className="px-3.5 py-2 bg-slate-950/80 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2.5 text-xs opacity-0 group-hover:opacity-100 transition-all duration-300">
-        {/* Left: Mode Toggle & Range In/Out Markers */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Toggle Mode: Full Video vs Range */}
-          <div className="flex items-center gap-1 bg-slate-900 p-0.5 rounded-xl border border-slate-800">
-            <button
-              onClick={() => handleToggleRange(false)}
-              className={`px-2.5 py-1 rounded-lg font-medium transition-all text-xs ${
-                !timeRange.enabled
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              全片
-            </button>
-
-            <button
-              onClick={() => handleToggleRange(true)}
-              className={`px-2.5 py-1 rounded-lg font-medium flex items-center gap-1.5 transition-all text-xs ${
-                timeRange.enabled
-                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <SplitSquareVertical className="w-3.5 h-3.5" />
-              <span>自訂區間</span>
-            </button>
-          </div>
-
-          {/* When Range is Enabled: Enlarged Start & End Buttons with Color-Change and Hover Extras */}
-          {timeRange.enabled && (
-            <div className="flex items-center gap-2 animate-fade-in font-mono">
-              {/* Start Point Button & Time */}
-              <div className={`group/start flex items-center gap-1.5 p-1 rounded-xl border transition-all ${
-                activeMarker === 'start'
-                  ? 'bg-purple-950/70 border-purple-500 shadow-sm shadow-purple-600/30 ring-1 ring-purple-500/50'
-                  : 'bg-slate-900 border-slate-700/80 hover:border-purple-500/50'
-              }`}>
-                <button
-                  type="button"
-                  onClick={handleSetCurrentAsStart}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all text-xs active:scale-95 ${
-                    activeMarker === 'start'
-                      ? 'bg-purple-600 text-white shadow-md shadow-purple-600/40 ring-1 ring-purple-300'
-                      : 'bg-slate-800 hover:bg-slate-700 text-purple-300 hover:text-white'
-                  }`}
-                  title={`點擊以當前播放時間 (${formatTime(currentTime, duration >= 3600)}) 設為起點`}
-                >
-                  <Crosshair className="w-4 h-4 fill-current" />
-                  <span className="text-xs">起點</span>
-                </button>
-
-                <input
-                  type="text"
-                  value={startInputText}
-                  onChange={(e) => setStartInputText(e.target.value)}
-                  onBlur={(e) => handleRangeStartChange(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleRangeStartChange((e.target as HTMLInputElement).value);
-                  }}
-                  className="w-16 bg-transparent text-center text-white text-xs font-mono focus:outline-none focus:bg-slate-950 rounded px-1 py-0.5 border border-transparent focus:border-purple-500"
-                  title="起點時間 (可手動修改)"
-                />
-
-                {/* Hover-only controls: Stepper & Seek */}
-                <div className="flex items-center gap-0.5 opacity-0 group-hover/start:opacity-100 transition-opacity duration-200">
-                  <button
-                    type="button"
-                    onClick={() => handleAdjustStart(-5)}
-                    className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white text-[10px]"
-                    title="起點 -5s"
-                  >
-                    -5s
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleAdjustStart(5)}
-                    className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white text-[10px]"
-                    title="起點 +5s"
-                  >
-                    +5s
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onSeek(timeRange.start)}
-                    className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-purple-300"
-                    title="跳轉播放起點"
-                  >
-                    <Play className="w-3.5 h-3.5 fill-current" />
-                  </button>
-                </div>
-              </div>
-
-              <span className="text-slate-600 text-xs">至</span>
-
-              {/* End Point Button & Time */}
-              <div className={`group/end flex items-center gap-1.5 p-1 rounded-xl border transition-all ${
-                activeMarker === 'end'
-                  ? 'bg-purple-950/70 border-purple-500 shadow-sm shadow-purple-600/30 ring-1 ring-purple-500/50'
-                  : 'bg-slate-900 border-slate-700/80 hover:border-purple-500/50'
-              }`}>
-                <button
-                  type="button"
-                  onClick={handleSetCurrentAsEnd}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all text-xs active:scale-95 ${
-                    activeMarker === 'end'
-                      ? 'bg-purple-600 text-white shadow-md shadow-purple-600/40 ring-1 ring-purple-300'
-                      : 'bg-slate-800 hover:bg-slate-700 text-purple-300 hover:text-white'
-                  }`}
-                  title={`點擊以當前播放時間 (${formatTime(currentTime, duration >= 3600)}) 設為終點`}
-                >
-                  <Crosshair className="w-4 h-4 fill-current" />
-                  <span className="text-xs">終點</span>
-                </button>
-
-                <input
-                  type="text"
-                  value={endInputText}
-                  onChange={(e) => setEndInputText(e.target.value)}
-                  onBlur={(e) => handleRangeEndChange(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleRangeEndChange((e.target as HTMLInputElement).value);
-                  }}
-                  className="w-16 bg-transparent text-center text-white text-xs font-mono focus:outline-none focus:bg-slate-950 rounded px-1 py-0.5 border border-transparent focus:border-purple-500"
-                  title="終點時間 (可手動修改)"
-                />
-
-                {/* Hover-only controls: Stepper & Seek */}
-                <div className="flex items-center gap-0.5 opacity-0 group-hover/end:opacity-100 transition-opacity duration-200">
-                  <button
-                    type="button"
-                    onClick={() => handleAdjustEnd(-5)}
-                    className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white text-[10px]"
-                    title="終點 -5s"
-                  >
-                    -5s
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleAdjustEnd(5)}
-                    className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white text-[10px]"
-                    title="終點 +5s"
-                  >
-                    +5s
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onSeek(timeRange.end)}
-                    className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-purple-300"
-                    title="跳轉播放終點"
-                  >
-                    <Play className="w-3.5 h-3.5 fill-current" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Real-time Status / Loading Banner */}
       {isGenerating && (
-        <div className="px-4 py-2.5 bg-purple-950/80 border-b border-purple-800/80 text-purple-200 text-xs flex items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <Loader2 className="w-4 h-4 text-purple-400 animate-spin flex-shrink-0" />
-            <span className="font-mono truncate">{statusText || 'AI 運算進行中...'}</span>
+        <div className="px-4 py-2.5 bg-purple-950/90 border-b border-purple-800/80 text-purple-200 text-xs flex flex-col gap-1.5 animate-fade-in flex-shrink-0">
+          <div className="flex items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2 min-w-0">
+              <Loader2 className="w-4 h-4 text-purple-400 animate-spin flex-shrink-0" />
+              <span className="font-mono truncate">{statusText || 'AI 深度分析運算中...'}</span>
+            </div>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <span className="text-[11px] font-mono text-purple-300">
+                已耗時 {elapsedSeconds}s / 預計約 {estimatedSeconds}s
+              </span>
+              <button
+                onClick={handleStopGeneration}
+                className="flex items-center gap-1 px-2.5 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-[11px] font-semibold transition-colors shadow-sm active:scale-95"
+                title="終止生成並保留目前產生的內容"
+              >
+                <Square className="w-3 h-3 fill-current" />
+                <span>終止</span>
+              </button>
+            </div>
           </div>
-          <button
-            onClick={handleStopGeneration}
-            className="flex items-center gap-1 px-2.5 py-1 bg-rose-600/80 hover:bg-rose-600 text-white rounded-lg text-[11px] font-semibold transition-colors flex-shrink-0"
-          >
-            <Square className="w-3 h-3 fill-current" />
-            <span>停止生成</span>
-          </button>
+          {/* Progress bar */}
+          <div className="w-full bg-purple-900/40 h-1.5 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-purple-500 via-indigo-400 to-purple-300 transition-all duration-300 rounded-full"
+              style={{
+                width: `${Math.min(96, Math.max(8, Math.round((elapsedSeconds / Math.max(1, estimatedSeconds)) * 100)))}%`
+              }}
+            />
+          </div>
         </div>
       )}
 
@@ -729,12 +608,12 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
                   <button
-                    onClick={handleGenerateAI}
+                    onClick={() => setShowAIGenerateModal(true)}
                     disabled={isGenerating}
                     className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-purple-600/25 transition-all disabled:opacity-50 active:scale-95"
                   >
                     <Wand2 className="w-4 h-4" />
-                    {timeRange.enabled ? '使用 AI API 分析自訂區間' : '開始 AI 深度分析'}
+                    <span>AI 重點整理</span>
                   </button>
                   <button
                     onClick={onOpenLMConfig}
@@ -750,6 +629,219 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
           </div>
         )}
       </div>
+
+      {/* AI Generate Wizard Modal (按鈕連結整合：1.選擇提示範本 -> 2.選擇區間或全部 -> 3.送出執行並顯示預計時間，可再按一下終止) */}
+      {showAIGenerateModal && (
+        <div
+          className="absolute inset-0 bg-slate-950/80 backdrop-blur-md z-50 p-3 sm:p-5 flex items-center justify-center animate-fade-in"
+          onClick={() => setShowAIGenerateModal(false)}
+        >
+          <div
+            className="max-w-lg w-full bg-slate-900 border border-slate-700/90 rounded-2xl shadow-2xl p-4 sm:p-5 flex flex-col gap-4 max-h-[92%] overflow-y-auto custom-scrollbar"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-purple-600/30">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-sm">AI 重點整理</h4>
+                  <p className="text-[11px] text-slate-400">依序選擇提示範本與分析範圍後送出執行</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAIGenerateModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+                title="關閉"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Step 1: 選擇提示範本 */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-purple-600/30 text-purple-300 text-[10px] flex items-center justify-center font-bold">1</span>
+                  選擇提示範本
+                </span>
+                <span className="text-[10px] text-slate-500 font-normal">依需求選擇架構</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {PROMPT_PRESETS.map((p) => {
+                  const isSelected = (lmConfig.presetId || 'business') === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => handleScenarioChange(p.id)}
+                      className={`p-2.5 rounded-xl border text-left transition-all flex flex-col gap-1 ${
+                        isSelected
+                          ? 'bg-purple-600/20 border-purple-500 shadow-sm shadow-purple-600/20 text-white ring-1 ring-purple-400/50'
+                          : 'bg-slate-800/60 border-slate-700/70 text-slate-300 hover:bg-slate-800 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-sm">{p.icon}</span>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-purple-400" />}
+                      </div>
+                      <div className="font-bold text-xs truncate">{p.name}</div>
+                      <div className="text-[10px] text-slate-400 line-clamp-1">{p.description}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Step 2: 選擇區間或全部 */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-indigo-600/30 text-indigo-300 text-[10px] flex items-center justify-center font-bold">2</span>
+                  選擇分析範圍
+                </span>
+                <span className="text-[10px] text-slate-500 font-normal">全片或自訂時間區間</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {/* Option 1: 全片 */}
+                <button
+                  type="button"
+                  onClick={() => handleToggleRange(false)}
+                  className={`p-2.5 rounded-xl border text-left transition-all flex flex-col gap-1 ${
+                    !timeRange.enabled
+                      ? 'bg-blue-600/20 border-blue-500 shadow-sm shadow-blue-600/20 text-white ring-1 ring-blue-400/50'
+                      : 'bg-slate-800/60 border-slate-700/70 text-slate-300 hover:bg-slate-800 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="font-bold text-xs">全片逐字稿</span>
+                    {!timeRange.enabled && <Check className="w-3.5 h-3.5 text-blue-400" />}
+                  </div>
+                  <div className="text-[10px] text-slate-400">
+                    00:00 ~ {formatTime(duration, duration >= 3600)}
+                  </div>
+                  <div className="text-[10px] text-blue-300/80 font-mono">
+                    共 {subtitles.length} 句逐字稿
+                  </div>
+                </button>
+
+                {/* Option 2: 區間 */}
+                <button
+                  type="button"
+                  onClick={() => handleToggleRange(true)}
+                  className={`p-2.5 rounded-xl border text-left transition-all flex flex-col gap-1 ${
+                    timeRange.enabled
+                      ? 'bg-purple-600/20 border-purple-500 shadow-sm shadow-purple-600/20 text-white ring-1 ring-purple-400/50'
+                      : 'bg-slate-800/60 border-slate-700/70 text-slate-300 hover:bg-slate-800 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="font-bold text-xs">自訂時間區間</span>
+                    {timeRange.enabled && <Check className="w-3.5 h-3.5 text-purple-400" />}
+                  </div>
+                  <div className="text-[10px] text-slate-400">
+                    {formatTime(timeRange.start, duration >= 3600)} ~ {formatTime(timeRange.end, duration >= 3600)}
+                  </div>
+                  <div className="text-[10px] text-purple-300/80 font-mono">
+                    共 {activeSubtitles.length} 句 ({formatTime(rangeDuration, rangeDuration >= 3600)})
+                  </div>
+                </button>
+              </div>
+
+              {/* Range Detail Editors (When Range is Selected) */}
+              {timeRange.enabled && (
+                <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-xl space-y-2 text-xs animate-fade-in font-mono">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-400 text-[11px] font-sans">起點時間</span>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        value={startInputText}
+                        onChange={(e) => setStartInputText(e.target.value)}
+                        onBlur={(e) => handleRangeStartChange(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleRangeStartChange((e.target as HTMLInputElement).value);
+                        }}
+                        className="w-16 bg-slate-900 text-center text-white text-xs font-mono rounded px-1.5 py-1 border border-slate-700 focus:border-purple-500 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSetCurrentAsStart}
+                        className="px-2 py-1 rounded bg-slate-800 hover:bg-purple-600 hover:text-white text-purple-300 text-[10px] font-sans transition-colors active:scale-95"
+                        title="將當前播放時間設為起點"
+                      >
+                        當前播放 ({formatTime(currentTime, duration >= 3600)})
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-slate-400 text-[11px] font-sans">終點時間</span>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        value={endInputText}
+                        onChange={(e) => setEndInputText(e.target.value)}
+                        onBlur={(e) => handleRangeEndChange(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleRangeEndChange((e.target as HTMLInputElement).value);
+                        }}
+                        className="w-16 bg-slate-900 text-center text-white text-xs font-mono rounded px-1.5 py-1 border border-slate-700 focus:border-purple-500 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSetCurrentAsEnd}
+                        className="px-2 py-1 rounded bg-slate-800 hover:bg-purple-600 hover:text-white text-purple-300 text-[10px] font-sans transition-colors active:scale-95"
+                        title="將當前播放時間設為終點"
+                      >
+                        當前播放 ({formatTime(currentTime, duration >= 3600)})
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Estimated Time Indicator */}
+            <div className="p-3 bg-gradient-to-r from-purple-950/40 via-indigo-950/40 to-slate-950/60 border border-purple-800/40 rounded-xl flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                <div>
+                  <div className="font-semibold text-purple-200">
+                    預計分析耗時：約 <span className="font-mono text-purple-300 font-bold text-sm">{estimatedSeconds}</span> 秒
+                  </div>
+                  <div className="text-[10px] text-slate-400">
+                    以選取之 {activeSubtitles.length} 句逐字稿（約 {totalChars} 字）推算
+                  </div>
+                </div>
+              </div>
+              <span className="text-[11px] font-mono text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20">
+                ~{estimatedSeconds}s
+              </span>
+            </div>
+
+            {/* Step 3: 送出執行按鈕 */}
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAIGenerateModal(false);
+                  handleGenerateAI();
+                }}
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-purple-600/30 transition-all flex items-center justify-center gap-2 active:scale-95"
+              >
+                <Wand2 className="w-4 h-4" />
+                <span>送出執行重點整理</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
