@@ -148,35 +148,34 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* Right: Operational Buttons */}
-      <div className="flex items-center gap-2 flex-shrink-0">
-        {/* Open Local Directory Button */}
-        <button
-          onClick={onOpenFolder}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 shadow-sm transition-all"
-          title="讀取電腦特定資料夾內的影音、字幕、簡報與設定檔"
-        >
-          <FolderOpen className="w-3.5 h-3.5 text-amber-400" />
-          <span className="hidden sm:inline">讀取特定資料夾</span>
-          <span className="sm:hidden">資料夾</span>
-        </button>
-
-        {/* Upload Dropdown */}
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        {/* Consolidated Open Folder & Upload Dropdown Button (Icon only) */}
         <div className="relative">
           <button
             onClick={() => setShowUploadDropdown(!showUploadDropdown)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 transition-all"
-            title="分別上傳或匯入檔案"
+            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 transition-all flex items-center justify-center shadow-sm"
+            title="開啟特定資料夾或上傳影音/字幕/簡報"
           >
-            <Upload className="w-3.5 h-3.5 text-blue-400" />
-            <span className="hidden sm:inline">個別上傳</span>
-            <ChevronDown className="w-3 h-3 text-slate-400" />
+            <FolderOpen className="w-4 h-4 text-amber-400" />
           </button>
 
           {showUploadDropdown && (
             <div
-              className="absolute right-0 top-full mt-2 w-48 bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl py-1.5 z-50 animate-fade-in text-xs"
+              className="absolute right-0 top-full mt-2 w-52 bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl py-1.5 z-50 animate-fade-in text-xs"
               onClick={() => setShowUploadDropdown(false)}
             >
+              {/* Option 1: Open Local Directory */}
+              <button
+                type="button"
+                onClick={onOpenFolder}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-slate-800 text-amber-300 hover:text-amber-200 cursor-pointer transition-colors text-left font-medium"
+              >
+                <FolderOpen className="w-4 h-4 text-amber-400" />
+                <span>讀取特定資料夾</span>
+              </button>
+
+              <div className="h-px bg-slate-800 my-1" />
+
               <label className="flex items-center gap-2.5 px-3.5 py-2 hover:bg-slate-800 text-slate-200 cursor-pointer transition-colors">
                 <Video className="w-4 h-4 text-blue-400" />
                 <span>上傳影音 (MP4/MP3)</span>
@@ -232,11 +231,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </div>
 
-        {/* Save Config to Folder / Export JSON */}
+        {/* Save Config to Folder / Export JSON (Icon only) */}
         <button
           onClick={onSaveConfig}
           disabled={isSaving}
-          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-md active:scale-95 ${
+          className={`p-2 rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center ${
             saveSuccess
               ? 'bg-emerald-600 text-white shadow-emerald-600/30 ring-1 ring-emerald-400'
               : hasDirHandle
@@ -244,35 +243,28 @@ export const Navbar: React.FC<NavbarProps> = ({
               : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
           }`}
           title={
-            hasDirHandle
-              ? '將設定寫回該資料夾內的 sync_config.json'
-              : '匯出並下載 sync_config.json 設定檔'
+            saveSuccess
+              ? '已儲存！'
+              : hasDirHandle
+              ? '存檔至資料夾 (sync_config.json)'
+              : '導出設定檔 (sync_config.json)'
           }
         >
           {saveSuccess ? (
-            <Check className="w-3.5 h-3.5" />
+            <Check className="w-4 h-4" />
           ) : (
-            <Save className="w-3.5 h-3.5" />
+            <Save className="w-4 h-4" />
           )}
-          <span>
-            {saveSuccess
-              ? '已儲存！'
-              : hasDirHandle
-              ? '存檔至資料夾'
-              : '導出設定檔'}
-          </span>
         </button>
 
-        {/* 統一設定入口 */}
+        {/* 統一設定入口 (Icon only) */}
         <div className="relative">
           <button
             onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shadow-sm transition-all"
+            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shadow-sm transition-all flex items-center justify-center"
             title="系統設定（AI 連線、版面視窗、示範專案）"
           >
-            <Settings className="w-3.5 h-3.5 text-slate-300" />
-            <span>設定</span>
-            <ChevronDown className="w-3 h-3 text-slate-400" />
+            <Settings className="w-4 h-4 text-slate-300" />
           </button>
 
           {showSettingsDropdown && (

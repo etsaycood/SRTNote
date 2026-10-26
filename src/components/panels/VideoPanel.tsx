@@ -332,7 +332,7 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
           {onToggleLoop && (
             <button
               onClick={onToggleLoop}
-              className={`p-1.5 rounded-lg transition-colors flex items-center gap-1 ${
+              className={`p-1.5 rounded-lg transition-colors flex items-center justify-center ${
                 isLooping
                   ? 'bg-blue-600/30 text-blue-400 border border-blue-500/40 shadow-sm'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
@@ -340,7 +340,6 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
               title={isLooping ? '重複播放：已開啟 (單曲循環)' : '重複播放：未開啟 (點擊開啟循環)'}
             >
               <Repeat className="w-3.5 h-3.5" />
-              <span className="text-[11px] font-medium hidden sm:inline">{isLooping ? '循環中' : '重複播放'}</span>
             </button>
           )}
 
@@ -348,11 +347,10 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
           {onOpenYouTubeModal && (
             <button
               onClick={onOpenYouTubeModal}
-              className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/15 transition-colors flex items-center gap-1"
+              className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/15 transition-colors flex items-center justify-center"
               title="貼上 YouTube 影片網址"
             >
               <YoutubeIcon className="w-3.5 h-3.5" />
-              <span className="text-[11px] font-medium hidden sm:inline">YouTube</span>
             </button>
           )}
 
@@ -434,20 +432,6 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
               className="w-full max-w-lg h-36 object-contain z-10"
             />
 
-            {/* Quick YouTube Paste Shortcut Button */}
-            {onOpenYouTubeModal && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenYouTubeModal();
-                }}
-                className="mt-3 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-850 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 text-xs transition-all shadow-sm hover:border-red-500/50"
-              >
-                <YoutubeIcon className="w-3.5 h-3.5 text-red-500" />
-                <span>貼上 YouTube 影片網址</span>
-              </button>
-            )}
 
             {/* Current Live Subtitle Banner Overlay */}
             {currentSubtitleText && (

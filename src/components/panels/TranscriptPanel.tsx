@@ -46,6 +46,7 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
+  const [editingLineId, setEditingLineId] = useState<string | null>(null);
   const [autoScroll, setAutoScroll] = useState(true);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -148,65 +149,75 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
 
   return (
     <div className="relative w-full h-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col group shadow-lg">
-      {/* Header Bar */}
-      <div className="px-4 py-2.5 border-b border-slate-800 bg-slate-950/80 backdrop-blur-md flex items-center gap-2.5 opacity-0 group-hover:opacity-100 transition-all duration-300 flex-wrap">
-        {/* Title (版面說明) */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span title="拖曳以調換位置" className="cursor-grab active:cursor-grabbing flex items-center">
-            <GripVertical className="w-3.5 h-3.5 text-slate-500 hover:text-slate-300" />
-          </span>
-          <FileText className="w-4 h-4 text-blue-400" />
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-            即時逐字稿
-          </h3>
-          <span className="text-[11px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full">
-            {subtitles.length} 句
-          </span>
-        </div>
-
-        {/* Functions & Controls (Placed directly next to title) */}
-        <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-          {/* Search Input */}
-          <div className="relative w-44 sm:w-56">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
-            <input
-              type="text"
-              placeholder="搜尋逐字稿關鍵字..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-800/80 border border-slate-700/80 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-colors"
-            />
+      {/* Top Header Badge & Controls (Floating overlay matching SlidePanel) */}
+      <div className="absolute top-3 left-4 right-4 z-20 flex items-center justify-between gap-2 pointer-events-auto opacity-0 group-hover:opacity-100 transition-all duration-300 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Title Badge (rounded-full) */}
+          <div className="flex items-center gap-2 bg-slate-950/85 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700/60 shadow-md">
+            <span title="拖曳以調換位置" className="cursor-grab active:cursor-grabbing flex items-center">
+              <GripVertical className="w-3.5 h-3.5 text-slate-500 hover:text-slate-300" />
+            </span>
+            <FileText className="w-3.5 h-3.5 text-blue-400" />
+            <span className="text-xs font-bold tracking-wider text-slate-200">
+              即時逐字稿
+            </span>
+            <span className="text-[11px] font-mono text-blue-300/80 bg-blue-950/60 px-2 py-0.5 rounded-full border border-blue-800/40">
+              {subtitles.length} 句
+            </span>
           </div>
 
-          {/* Action Controls */}
-          <div className="flex items-center gap-1">
+          {/* Action Controls & Search Pill */}
+          <div className="flex items-center gap-1.5 bg-slate-950/85 backdrop-blur-md p-1 rounded-xl border border-slate-700/60 shadow-md">
+            {/* Dynamic Sizing Search Input */}
+            <div className="relative w-28 sm:w-36 focus-within:w-48 sm:focus-within:w-56 transition-all duration-200">
+              <Search className="w-3 h-3 text-slate-400 absolute left-2 top-2" />
+              <input
+                type="text"
+                placeholder="搜尋關鍵字..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700/80 rounded-lg pl-6 pr-2 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-all"
+              />
+            </div>
+
+            {/* Auto Scroll (Icon only, no text) */}
             <button
               onClick={() => setAutoScroll(!autoScroll)}
-              className={`px-2 py-1 rounded-lg text-xs font-medium flex items-center gap-1 transition-colors ${
+              className={`p-1.5 rounded-lg text-xs font-medium transition-colors ${
                 autoScroll
                   ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                  : 'bg-slate-800 text-slate-400 hover:text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
-              title="自動平滑滾動到當前播放行"
+              title={autoScroll ? '自動滾動：已開啟' : '自動滾動：已關閉 (點擊開啟)'}
             >
               <ArrowDownToLine className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">自動滾動</span>
             </button>
 
+            {/* Global Proofread/Edit Toggle (Icon only, no text) */}
             <button
               onClick={() => setIsEditMode(!isEditMode)}
-              className={`px-2 py-1 rounded-lg text-xs font-medium flex items-center gap-1 transition-colors ${
+              className={`p-1.5 rounded-lg text-xs font-medium transition-colors ${
                 isEditMode
                   ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                  : 'bg-slate-800 text-slate-300 hover:text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
-              title="微調字幕時間與內容"
+              title={isEditMode ? '完成校對' : '開啟逐字稿校對模式'}
             >
-              {isEditMode ? <Check className="w-3.5 h-3.5" /> : <Edit2 className="w-3.5 h-3.5" />}
-              <span>{isEditMode ? '完成' : '校對'}</span>
+              {isEditMode ? <Check className="w-3.5 h-3.5 text-amber-300" /> : <Edit2 className="w-3.5 h-3.5" />}
             </button>
 
-            {/* Export / Upload */}
+            {/* Add subtitle line */}
+            {isEditMode && (
+              <button
+                onClick={handleAddLine}
+                className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                title="新增一行逐字稿"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {/* Export SRT */}
             <button
               onClick={handleDownloadSRT}
               className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
@@ -215,49 +226,52 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
               <Download className="w-3.5 h-3.5" />
             </button>
 
+            {/* Import SRT */}
             <label
               className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer transition-colors"
               title="匯入 SRT/VTT 字幕"
             >
               <Upload className="w-3.5 h-3.5" />
-              <input type="file" accept=".srt,.vtt,.json" onChange={onUploadSubtitles} className="hidden" />
+              <input type="file" accept=".srt,.vtt,.txt" onChange={onUploadSubtitles} className="hidden" />
             </label>
 
             {onOpenPasteModal && (
               <button
                 onClick={onOpenPasteModal}
                 className="p-1.5 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-slate-800 transition-colors"
-                title="貼上逐字稿文字 (支援 YouTube 逐字稿、時間標記文字或 SRT)"
+                title="貼上逐字稿文字"
               >
                 <Clipboard className="w-3.5 h-3.5" />
               </button>
             )}
-
-            <button
-              onClick={onToggleMaximize}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-              title={isMaximized ? '還原視窗' : '最大化視窗'}
-            >
-              {isMaximized ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-            </button>
-
-            {onClose && (
-              <button
-                onClick={onClose}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 transition-colors"
-                title="關閉此面板（可由右上角加回）"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
           </div>
+        </div>
+
+        {/* Window controls (Maximize & Close) */}
+        <div className="flex items-center gap-1 bg-slate-950/85 backdrop-blur-md p-1 rounded-xl border border-slate-700/60 shadow-md">
+          <button
+            onClick={onToggleMaximize}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            title={isMaximized ? '還原視窗' : '最大化視窗'}
+          >
+            {isMaximized ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+          </button>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 transition-colors"
+              title="關閉此面板（可由右上角加回）"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Subtitles Scroll List */}
+      {/* Subtitles Scroll List (Takes 100% full height underneath overlay) */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-2.5 custom-scrollbar bg-slate-900/60"
+        className="flex-1 overflow-y-auto p-4 pt-14 space-y-2.5 custom-scrollbar bg-slate-900/60 h-full w-full"
       >
         {filteredSubtitles.length === 0 ? (
           <div className="text-center py-12 text-slate-500 text-sm">
@@ -266,6 +280,7 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
         ) : (
           filteredSubtitles.map((sub) => {
             const isCurrent = sub.id === activeSubId;
+            const isLineEditing = isEditMode || editingLineId === sub.id;
 
             return (
               <div
@@ -275,11 +290,11 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
                   isCurrent
                     ? 'bg-blue-600/15 border-blue-500/40 shadow-md ring-1 ring-blue-500/20'
                     : 'bg-slate-850/50 hover:bg-slate-800/80 border-slate-800/60'
-                } p-3.5 flex flex-col gap-2`}
+                } p-3 flex flex-col gap-1.5`}
               >
-                {/* Meta Row: Time & Speaker */}
+                {/* Meta Row: Time, Speaker, and Proofread Button */}
                 <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2.5">
                     {/* Timestamp clickable button */}
                     <button
                       type="button"
@@ -295,14 +310,14 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
                     </button>
 
                     {/* Speaker */}
-                    {isEditMode ? (
+                    {isLineEditing ? (
                       <div className="flex items-center gap-1">
                         <User className="w-3 h-3 text-slate-500" />
                         <input
                           type="text"
                           value={sub.speaker}
                           onChange={(e) => handleLineChange(sub.id, 'speaker', e.target.value)}
-                          className="w-24 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                          className="w-20 sm:w-24 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-blue-500"
                         />
                       </div>
                     ) : (
@@ -312,47 +327,64 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
                     )}
                   </div>
 
-                  {/* Edit Controls Toolbar */}
-                  {isEditMode && (
-                    <div className="flex items-center gap-1 text-[11px]">
-                      <button
-                        type="button"
-                        onClick={() => handleAdjustTime(sub.id, -0.5)}
-                        className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-                        title="時間往前移 0.5 秒"
-                      >
-                        -0.5s
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleAdjustTime(sub.id, 0.5)}
-                        className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-                        title="時間往後延 0.5 秒"
-                      >
-                        +0.5s
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleSetCurrentStart(sub.id)}
-                        className="p-1 rounded bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 transition-colors"
-                        title="將起點設為當前影音秒數"
-                      >
-                        <Crosshair className="w-3 h-3" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteLine(sub.id)}
-                        className="p-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 transition-colors"
-                        title="刪除此句"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  )}
+                  {/* Right Side: Per-line Proofread & Time Controls */}
+                  <div className="flex items-center gap-1">
+                    {/* Time Adjustment Controls (When editing this line) */}
+                    {isLineEditing && (
+                      <div className="flex items-center gap-0.5 text-[11px] animate-fade-in mr-1">
+                        <button
+                          type="button"
+                          onClick={() => handleAdjustTime(sub.id, -0.5)}
+                          className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                          title="時間往前移 0.5 秒"
+                        >
+                          -0.5s
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAdjustTime(sub.id, 0.5)}
+                          className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                          title="時間往後延 0.5 秒"
+                        >
+                          +0.5s
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetCurrentStart(sub.id)}
+                          className="p-1 rounded bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 transition-colors"
+                          title="將起點設為當前影音秒數"
+                        >
+                          <Crosshair className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteLine(sub.id)}
+                          className="p-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 transition-colors"
+                          title="刪除此句"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Inline Proofread/Edit Button beside each subtitle item */}
+                    <button
+                      type="button"
+                      onClick={() => setEditingLineId(editingLineId === sub.id ? null : sub.id)}
+                      className={`p-1 rounded-md text-xs transition-colors flex items-center gap-1 ${
+                        isLineEditing
+                          ? 'bg-amber-500/25 text-amber-300'
+                          : 'opacity-0 group-hover/item:opacity-100 text-slate-400 hover:text-white hover:bg-slate-800'
+                      }`}
+                      title={isLineEditing ? '完成校對' : '校對此句'}
+                    >
+                      {isLineEditing ? <Check className="w-3.5 h-3.5 text-amber-300" /> : <Edit2 className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Subtitle Text Content */}
-                {isEditMode ? (
+                {isLineEditing ? (
                   <textarea
                     rows={2}
                     value={sub.text}
