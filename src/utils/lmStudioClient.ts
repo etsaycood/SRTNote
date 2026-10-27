@@ -16,6 +16,7 @@ export const DEFAULT_LM_STUDIO_CONFIG: LMStudioConfig = {
   baseUrl: 'http://127.0.0.1:1234/v1',
   model: '',
   temperature: 0.3,
+  contextWindow: 4096,
   systemPrompt: `你是一位資深的影音內容智慧分析師與知識整理專家。
 請閱讀以下帶有時間錨點標籤的逐字稿，為使用者整理出結構清晰、重點突出、具商業實用價值的「重點整理與精華摘要」。
 
@@ -30,6 +31,19 @@ export const DEFAULT_LM_STUDIO_CONFIG: LMStudioConfig = {
 - 若單一重點橫跨多個標籤，請取該觀點起始句的標籤，確保使用者點擊時能從開頭完整聽起。
 - 請使用繁體中文、排版嚴謹且條理分明。`
 };
+
+/**
+ * 快速預估文本 Token 數 (中文字元約 1.6 tokens, 英文字詞約 1.3 tokens)
+ */
+export function estimateTokens(text: string): number {
+  if (!text) return 0;
+  const cjkRegex = /[\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]/g;
+  const cjkMatches = text.match(cjkRegex) || [];
+  const cjkCount = cjkMatches.length;
+  const nonCjkText = text.replace(cjkRegex, ' ');
+  const words = nonCjkText.trim().split(/\s+/).filter(Boolean).length;
+  return Math.round(cjkCount * 1.6 + words * 1.3);
+}
 
 /**
  * Validate and clean API Base URL
@@ -93,6 +107,8 @@ export function formatSubtitlesForPrompt(subtitles: SubtitleItem[], maxItems = 2
   return promptText;
 }
 
+export type AIProcessingStage = 'prepare' | 'thinking' | 'streaming';
+
 /**
  * Generate AI Summary via AI API (LM Studio / Ollama / OpenAI compatible) with streaming support and activity watchdog.
  */
@@ -100,6 +116,7 @@ export async function streamLMStudioSummary({
   config,
   subtitles,
   abortController,
+  onStage,
   onStatus,
   onChunk,
   onComplete,
@@ -108,6 +125,7 @@ export async function streamLMStudioSummary({
   config: LMStudioConfig;
   subtitles: SubtitleItem[];
   abortController?: AbortController;
+  onStage?: (stage: AIProcessingStage, details?: { charCount?: number; tokenCount?: number }) => void;
   onStatus?: (status: string) => void;
   onChunk: (chunk: string, fullText: string) => void;
   onComplete: (fullText: string) => void;
@@ -123,6 +141,9 @@ export async function streamLMStudioSummary({
   const url = `${cleanBase}/chat/completions`;
 
   // 1. 執行背景優化：智慧精煉與時間標記打點
+  onStage?.('prepare');
+  onStatus?.('正在準備逐字稿與時間錨點標籤...');
+
   const compressedSentences = smartSentenceCompress(subtitles, {
     maxSpanSec: 12.0,
     pauseThreshold: 0.6,
@@ -134,8 +155,6 @@ export async function streamLMStudioSummary({
     compressedSentences,
     280
   );
-
-  onStatus?.('正在準備逐字稿與時間錨點標籤...');
 
   let targetModel = config.model;
   if (!targetModel) {
@@ -162,6 +181,7 @@ export async function streamLMStudioSummary({
     stream: true
   };
 
+  onStage?.('thinking');
   onStatus?.(`已發送請求至 AI API 伺服器 (${targetModel || '模型'})，AI 正在進行思考推論...`);
 
   // Activity Watchdog Controller
@@ -241,6 +261,8 @@ export async function streamLMStudioSummary({
               fullText += delta;
               pendingDelta += delta;
               tokenCount++;
+
+              onStage?.('streaming', { charCount: fullText.length, tokenCount });
 
               // Throttle UI update every ~80ms to avoid locking the UI thread with constant React re-renders & regex parsing
               flushStream(false);

@@ -111,3 +111,30 @@
   font-size: 0.8em;
   color: #c084fc;
 }
+
+/* KaTeX formula display styling */
+.markdown-body .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem 0;
+}
+
+.markdown-body .katex {
+  font-size: 1.05em;
+  color: #e2e8f0;
+}
+
+/* Shimmer animation for indeterminate AI generation status */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 1.8s infinite ease-in-out;
+}
+

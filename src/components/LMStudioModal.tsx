@@ -20,6 +20,7 @@ export const LMStudioModal: React.FC<LMStudioModalProps> = ({
   const [baseUrl, setBaseUrl] = useState(config.baseUrl);
   const [model, setModel] = useState(config.model);
   const [temperature, setTemperature] = useState(config.temperature);
+  const [contextWindow, setContextWindow] = useState(config.contextWindow || 4096);
   const [systemPrompt, setSystemPrompt] = useState(config.systemPrompt);
   const [activePresetId, setActivePresetId] = useState<string>(config.presetId || 'business');
   
@@ -79,6 +80,7 @@ export const LMStudioModal: React.FC<LMStudioModalProps> = ({
         baseUrl: clean,
         model,
         temperature,
+        contextWindow,
         systemPrompt,
         presetId: activePresetId
       });
@@ -208,6 +210,28 @@ export const LMStudioModal: React.FC<LMStudioModalProps> = ({
               onChange={(e) => setTemperature(parseFloat(e.target.value))}
               className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
             />
+          </div>
+
+          {/* Context Window / 上下文長度限制 */}
+          <div>
+            <div className="flex justify-between items-center mb-1.5">
+              <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <Sliders className="w-3.5 h-3.5 text-purple-400" />
+                模型上下文長度限制 (Context Window)
+              </label>
+              <span className="text-[11px] text-slate-400">當字幕超出時提醒分段/自訂區間</span>
+            </div>
+            <select
+              value={contextWindow}
+              onChange={(e) => setContextWindow(parseInt(e.target.value, 10))}
+              className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500 transition-colors font-mono text-xs"
+            >
+              <option value={2048}>2,048 Tokens (~1,200 字，小型模型)</option>
+              <option value={4096}>4,096 Tokens (~2,500 字，預設標準)</option>
+              <option value={8192}>8,192 Tokens (~5,000 字，中型上下文)</option>
+              <option value={16384}>16,384 Tokens (~10,000 字，長文模型)</option>
+              <option value={32768}>32,768 Tokens (~20,000 字，超長上下文)</option>
+            </select>
           </div>
 
           {/* System Prompt & Scenario Presets */}

@@ -28,6 +28,7 @@ export interface LMStudioConfig {
   temperature: number;
   systemPrompt: string;
   presetId?: string;
+  contextWindow?: number; // Maximum safe context window in tokens (e.g. 4096, 8192, 16384)
 }
 
 export type PanelId = 'video' | 'slides' | 'transcript' | 'summary';
