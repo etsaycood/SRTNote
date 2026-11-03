@@ -6,7 +6,9 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?logo=vite&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?logo=tailwind-css&logoColor=white)
-![Version](https://img.shields.io/badge/Version-v1.1.0-blue?logo=github)
+![Version](https://img.shields.io/badge/Version-v1.2.0-blue?logo=github)
+![KaTeX](https://img.shields.io/badge/KaTeX-LaTeX%20Math-00599C)
+![Cloud Share](https://img.shields.io/badge/Cloud%20Share-Pastes.dev%20%7C%20dpaste-success)
 ![LM Studio](https://img.shields.io/badge/LM%20Studio-Local%20AI-blueviolet)
 ![License](https://img.shields.io/badge/License-MIT-green)
 [![Deploy to GitHub Pages](https://github.com/etsaycood/SRTNote/actions/workflows/deploy.yml/badge.svg)](https://github.com/etsaycood/SRTNote/actions/workflows/deploy.yml)
@@ -89,6 +91,28 @@
 ### 8. ⛓️‍💥 簡報暫停同步與自由翻頁閱讀 (Slide Sync Pause Mode)
 - **簡報懸浮控制器切換**：簡報底部懸浮導覽列新增 `[ 🔗 同步中 ]` / `[ ⛓️‍💥 暫停同步 ]` 切換按鈕。
 - **自由翻閱不被強制拉回**：暫停同步時可自由點選「上一頁/下一頁」仔細研讀投影片或筆記，影音播放時不會強制跳回目前秒數；隨時點擊即可重新與影音進度同步。
+
+
+### 9. 📐 強化 Markdown 數學符號與公式排版 (KaTeX / LaTeX Engine)
+- **KaTeX 原生支援**：內建 marked-katex-extension 與 KaTeX 數學引擎，支援行內公式（如 $E = mc^2$）、流程標記與多行公式塊。
+- **無縫符號轉換**：各類流程箭頭（如 $\rightarrow$ 轉換為 **→**、$\Rightarrow$ 轉換為 **⇒**）皆可流暢顯示，適合技術流程圖與演算法教學整理。
+- **雙向資安消毒**：DOMPurify 完整白名單放行 MathML 與 SVG 符號節點，兼顧數學排版與防 XSS 資安保護。
+
+### 10. ⚡ AI 即時三階段狀態指示器與極速 Token 預估
+- **三階段真實狀態指示**：徹底移除不實的預估秒數與假進度條，改採 **① 資料精煉** (贅字去除/ID打點) → **② 思考推論** (模型思考/TTFT) → **③ 串流生成** (即時產出字數統計 + 打字機效果) 狀態膠囊與無確定進度流光特效。
+- **前端 <1ms Token 預估**：即時依中文字元 (~1.6 tokens) 與英數字詞 (~1.3 tokens) 評估目前字幕量。
+- **上下文超限防呆警示**：提供「模型上下文長度限制 (Context Window)」設定；當內容超出時自動跳出應對指引（支援「切換為自訂時間區間整理」、「仍要嘗試全量發送」或「調整 API 設定」）。
+
+### 11. 🔗 雲端分享連結雙模式 (Cloud Share & Auto-Routing ?s=p_, d_, j_)
+- **多平台直連與智慧分流**：
+  - **?s=p_代號**（[Pastes.dev](https://pastes.dev)）：上限 ~10 MB，支援大量影片紀錄與長篇逐字稿。
+  - **?s=d_代號**（[dpaste.com](https://dpaste.com)）：上限 ~1 MB，免預檢高相容表單儲存。
+  - **?s=j_代號**（[JSONBlob](https://jsonblob.com)）：備援輕量儲存。
+- **雙模式分享（內容不含簡報，確保超輕量）**：
+  - **當前影片 + 逐字稿 + 重點整理分享**：完整分享當前播放的 YouTube 影音、逐字稿字幕與 AI 重點整理筆記。
+  - **YouTube 影片記錄分享**：一鍵分享整組已儲存的 YouTube 影片清單（包含自訂排序）與輪播佇列，並可勾選是否一併包含各影片綁定之 SRT 字幕。
+- **開啟分享連結自動隱藏簡報面板（選項 1-A）**：
+  - 開啟 ?s=... 網址時，系統自動將「同步簡報」面板關閉隱藏，以「影音視窗 + 即時逐字稿 + 重點整理」三窗格極簡呈現，同時於頂部提供狀態列與原始 JSON 檢視入口。
 
 ---
 
