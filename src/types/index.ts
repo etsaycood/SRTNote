@@ -46,8 +46,11 @@ export type MediaType = 'video' | 'audio' | 'youtube';
 
 export type LoopMode = 'off' | 'single' | 'all';
 
+export type ShareMode = 'current_note' | 'youtube_history';
+
 export interface ProjectConfig {
   version: string;
+  shareMode?: ShareMode;
   title: string;
   mediaType: MediaType;
   youtubeUrl?: string;
@@ -58,6 +61,7 @@ export interface ProjectConfig {
   subtitlesByMedia?: Record<string, SubtitleItem[]>;
   slides: SlideItem[];
   slidesByMedia?: Record<string, SlideItem[]>;
+  youtubeHistory?: YouTubeHistoryItem[];
   playlistVideoIds?: string[];
   loopMode?: LoopMode;
   aiSummary: string;

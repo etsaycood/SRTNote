@@ -194,3 +194,37 @@ export function saveCustomLibraryOrder(items: YouTubeHistoryItem[]): void {
     localStorage.setItem(YT_LIBRARY_STORAGE_KEY, JSON.stringify(items.slice(0, 100)));
   } catch (e) {}
 }
+
+export function mergeSharedYouTubeLibrary(sharedItems: YouTubeHistoryItem[]): YouTubeHistoryItem[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const current = getStoredYouTubeLibrary();
+    const seen = new Set<string>();
+    const merged: YouTubeHistoryItem[] = [];
+
+    for (const item of sharedItems) {
+      if (item && item.id && !seen.has(item.id)) {
+        seen.add(item.id);
+        merged.push({
+          id: item.id,
+          url: item.url || `https://www.youtube.com/watch?v=${item.id}`,
+          title: item.title || `YouTube 影片 (${item.id})`,
+          addedAt: item.addedAt || Date.now()
+        });
+      }
+    }
+
+    for (const old of current) {
+      if (old && old.id && !seen.has(old.id)) {
+        seen.add(old.id);
+        merged.push(old);
+      }
+    }
+
+    const finalList = merged.slice(0, 100);
+    localStorage.setItem(YT_LIBRARY_STORAGE_KEY, JSON.stringify(finalList));
+    return finalList;
+  } catch (e) {
+    return [];
+  }
+}

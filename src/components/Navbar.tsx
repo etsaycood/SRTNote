@@ -20,7 +20,8 @@ import {
   X,
   Clipboard,
   Settings,
-  Smartphone
+  Smartphone,
+  Share2
 } from 'lucide-react';
 import { YoutubeIcon } from './icons/YoutubeIcon';
 
@@ -47,6 +48,7 @@ interface NavbarProps {
   onImportConfig: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onOpenYouTubeModal?: () => void;
   onOpenPasteModal?: () => void;
+  onOpenShareModal?: () => void;
   isMobileMode?: boolean;
   onToggleMobileMode?: () => void;
 }
@@ -74,6 +76,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onImportConfig,
   onOpenYouTubeModal,
   onOpenPasteModal,
+  onOpenShareModal,
   isMobileMode = false,
   onToggleMobileMode
 }) => {
@@ -261,6 +264,17 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Save className="w-4 h-4" />
           )}
         </button>
+
+        {/* 雲端分享連結按鈕 (Icon only) */}
+        {onOpenShareModal && (
+          <button
+            onClick={onOpenShareModal}
+            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-400 hover:text-blue-300 border border-slate-700 transition-all shadow-md active:scale-95 flex items-center justify-center"
+            title="產生雲端分享連結 (?s=p_代號 / d_代號 / j_代號)"
+          >
+            <Share2 className="w-4 h-4" />
+          </button>
+        )}
 
         {/* 手機模式按鈕 (Icon only) */}
         {onToggleMobileMode && (

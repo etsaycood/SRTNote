@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { PanelId, LayoutPreset, SubtitleItem, SlideItem, ProjectConfig, LMStudioConfig, TimeRange, MediaType, LoopMode } from './types';
+import { PanelId, LayoutPreset, SubtitleItem, SlideItem, ProjectConfig, LMStudioConfig, TimeRange, MediaType, LoopMode, ShareMode } from './types';
 import { SAMPLE_PROJECT } from './mock/sampleProject';
 import { DEFAULT_LM_STUDIO_CONFIG } from './utils/lmStudioClient';
 import { parseSubtitleContent } from './utils/srtParser';
@@ -22,8 +22,11 @@ import { AISummaryPanel } from './components/panels/AISummaryPanel';
 import { LMStudioModal } from './components/LMStudioModal';
 import { SlideTimelineModal } from './components/SlideTimelineModal';
 import { YouTubeModal } from './components/YouTubeModal';
-import { extractYouTubeId } from './utils/youtubeHelper';
+import { extractYouTubeId, mergeSharedYouTubeLibrary } from './utils/youtubeHelper';
 import { PasteTranscriptModal } from './components/PasteTranscriptModal';
+import { ShareModal } from './components/ShareModal';
+import { fetchSharedConfig } from './utils/cloudShare';
+import { Loader2, CheckCircle2, AlertCircle, ExternalLink, X, ListVideo } from 'lucide-react';
 
 // Helper to detect non-PC devices (mobile phones or tablets)
 const detectNonPC = () => {
@@ -147,6 +150,97 @@ export default function App() {
   const [isSlideModalOpen, setIsSlideModalOpen] = useState(false);
   const [isYouTubeModalOpen, setIsYouTubeModalOpen] = useState(false);
   const [isPasteTranscriptModalOpen, setIsPasteTranscriptModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareModalInitialMode, setShareModalInitialMode] = useState<ShareMode>('current_note');
+  const [sharedBanner, setSharedBanner] = useState<{
+    type: 'loading' | 'success' | 'error';
+    message: string;
+    rawUrl?: string;
+    webViewUrl?: string;
+    isHistoryShare?: boolean;
+  } | null>(null);
+
+  const handleOpenShareModal = (mode: ShareMode = 'current_note') => {
+    setShareModalInitialMode(mode);
+    setIsShareModalOpen(true);
+  };
+
+  // --- Auto-load Cloud Shared Project when ?s=prefix_id is present in URL ---
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const shareParam = params.get('s');
+    if (!shareParam) return;
+
+    // 選項 1-A：當開啟分享連結時，自動將「同步簡報」面板關閉隱藏
+    setOpenPanels((prev) => prev.filter((id) => id !== 'slides'));
+
+    let cancelled = false;
+    setSharedBanner({
+      type: 'loading',
+      message: `正在從雲端讀取分享內容 (?s=${shareParam})...`
+    });
+
+    fetchSharedConfig(shareParam)
+      .then(({ config, meta }) => {
+        if (cancelled) return;
+
+        // 內容不包含簡報
+        setSlides([]);
+        setSlidesByMedia({});
+
+        if (config.title) setProjectTitle(config.title);
+        if (config.youtubeHistory && config.youtubeHistory.length > 0) {
+          mergeSharedYouTubeLibrary(config.youtubeHistory);
+        }
+        if (config.subtitlesByMedia) setSubtitlesByMedia(config.subtitlesByMedia);
+        if (Array.isArray(config.subtitles)) setSubtitles(config.subtitles);
+        if (Array.isArray(config.playlistVideoIds)) setPlaylistQueue(config.playlistVideoIds);
+        if (config.loopMode) setLoopMode(config.loopMode);
+        if (typeof config.aiSummary === 'string') setAiSummary(config.aiSummary);
+        if (config.mediaDuration && config.mediaDuration > 0) {
+          setDuration(config.mediaDuration);
+        }
+
+        const ytUrl =
+          config.youtubeUrl ||
+          (config.youtubeId ? `https://www.youtube.com/watch?v=${config.youtubeId}` : undefined) ||
+          (config.youtubeHistory && config.youtubeHistory[0]?.url);
+
+        if (ytUrl) {
+          setMediaType('youtube');
+          setMediaUrl(ytUrl);
+        } else if (config.mediaType) {
+          setMediaType(config.mediaType === 'youtube' ? 'audio' : config.mediaType);
+          setMediaUrl(undefined);
+        }
+
+        setCurrentTime(0);
+        setIsPlaying(false);
+
+        const isHistory = config.shareMode === 'youtube_history';
+        setSharedBanner({
+          type: 'success',
+          message: isHistory
+            ? `已從 ${meta.providerName} 載入分享的 YouTube 影片紀錄（共 ${config.youtubeHistory?.length || 0} 部影片，已自動隱藏簡報視窗）`
+            : `已從 ${meta.providerName} 載入分享專案「${config.title || '未命名'}」（已自動隱藏簡報視窗）`,
+          rawUrl: meta.rawUrl,
+          webViewUrl: meta.webViewUrl,
+          isHistoryShare: isHistory
+        });
+      })
+      .catch((err: any) => {
+        if (cancelled) return;
+        setSharedBanner({
+          type: 'error',
+          message: err.message || '讀取雲端分享連結失敗'
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // --- LM Studio Config State ---
   const [lmConfig, setLmConfig] = useState<LMStudioConfig>(() => {
@@ -765,6 +859,9 @@ export default function App() {
         try {
           const parsed: ProjectConfig = JSON.parse(event.target?.result as string);
           if (parsed.title) setProjectTitle(parsed.title);
+          if (parsed.youtubeHistory && parsed.youtubeHistory.length > 0) {
+            mergeSharedYouTubeLibrary(parsed.youtubeHistory);
+          }
           if (parsed.subtitles) setSubtitles(parsed.subtitles);
           if (parsed.subtitlesByMedia) setSubtitlesByMedia(parsed.subtitlesByMedia);
           if (parsed.playlistVideoIds) setPlaylistQueue(parsed.playlistVideoIds);
@@ -1000,9 +1097,63 @@ export default function App() {
         onImportConfig={handleImportConfig}
         onOpenYouTubeModal={() => setIsYouTubeModalOpen(true)}
         onOpenPasteModal={() => setIsPasteTranscriptModalOpen(true)}
+        onOpenShareModal={() => handleOpenShareModal('current_note')}
         isMobileMode={isMobileMode}
         onToggleMobileMode={handleToggleMobileMode}
       />
+
+      {/* Cloud Share Status Banner */}
+      {sharedBanner && (
+        <div
+          className={`px-4 py-2 border-b text-xs flex items-center justify-between gap-3 flex-shrink-0 animate-fade-in ${
+            sharedBanner.type === 'loading'
+              ? 'bg-blue-950/80 border-blue-800/80 text-blue-200'
+              : sharedBanner.type === 'success'
+              ? 'bg-emerald-950/70 border-emerald-800/70 text-emerald-200'
+              : 'bg-rose-950/80 border-rose-800/80 text-rose-200'
+          }`}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            {sharedBanner.type === 'loading' && <Loader2 className="w-4 h-4 animate-spin text-blue-400 flex-shrink-0" />}
+            {sharedBanner.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />}
+            {sharedBanner.type === 'error' && <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />}
+            <span className="truncate font-medium">{sharedBanner.message}</span>
+          </div>
+
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {sharedBanner.isHistoryShare && (
+              <button
+                type="button"
+                onClick={() => setIsYouTubeModalOpen(true)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold text-[11px] transition-colors shadow-sm"
+              >
+                <ListVideo className="w-3.5 h-3.5" />
+                <span>開啟影片紀錄清單</span>
+              </button>
+            )}
+            {sharedBanner.rawUrl && (
+              <a
+                href={sharedBanner.rawUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 px-2 py-0.5 rounded bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-[11px] font-mono transition-colors"
+                title="檢視雲端伺服器上的原始 JSON 檔案"
+              >
+                <span>原始 JSON</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={() => setSharedBanner(null)}
+              className="p-1 rounded hover:bg-slate-800/60 text-slate-400 hover:text-white transition-colors"
+              title="關閉提示"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 2. Main Resizable Workspace (Desktop Grid or Mobile Top/Bottom Panes) */}
       <main className="flex-1 w-full min-h-0 relative">
@@ -1084,6 +1235,7 @@ export default function App() {
         onStartPlaylist={handleStartPlaylist}
         subtitlesByMedia={subtitlesByMedia}
         slidesByMedia={slidesByMedia}
+        onOpenShareHistory={() => handleOpenShareModal('youtube_history')}
       />
 
       {/* 7. Paste Transcript Modal */}
@@ -1092,6 +1244,22 @@ export default function App() {
         onClose={() => setIsPasteTranscriptModalOpen(false)}
         onImportSubtitles={handleImportPastedSubtitles}
         defaultDuration={duration}
+      />
+
+      {/* 8. Cloud Share Modal */}
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        initialMode={shareModalInitialMode}
+        projectTitle={projectTitle}
+        mediaType={mediaType}
+        mediaUrl={mediaUrl}
+        duration={duration}
+        subtitles={subtitles}
+        subtitlesByMedia={subtitlesByMedia}
+        playlistQueue={playlistQueue}
+        loopMode={loopMode}
+        aiSummary={aiSummary}
       />
     </div>
   );

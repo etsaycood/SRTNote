@@ -25,7 +25,8 @@ import {
   GripVertical,
   ChevronUp,
   ChevronDown,
-  Presentation
+  Presentation,
+  Share2
 } from 'lucide-react';
 
 interface YouTubeModalProps {
@@ -37,6 +38,7 @@ interface YouTubeModalProps {
   onStartPlaylist?: (videoIds: string[]) => void;
   subtitlesByMedia?: Record<string, SubtitleItem[]>;
   slidesByMedia?: Record<string, SlideItem[]>;
+  onOpenShareHistory?: () => void;
 }
 
 export const YouTubeModal: React.FC<YouTubeModalProps> = ({
@@ -47,7 +49,8 @@ export const YouTubeModal: React.FC<YouTubeModalProps> = ({
   playlistQueue = [],
   onStartPlaylist,
   subtitlesByMedia = {},
-  slidesByMedia = {}
+  slidesByMedia = {},
+  onOpenShareHistory
 }) => {
   const [inputText, setInputText] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -384,10 +387,24 @@ export const YouTubeModal: React.FC<YouTubeModalProps> = ({
                 )}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
                 <span className="text-[10px] text-slate-500 hidden sm:inline">
                   (可拖曳把手或按 ▲▼ 調整順序)
                 </span>
+                {library.length > 0 && onOpenShareHistory && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onOpenShareHistory();
+                    }}
+                    className="text-[11px] text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 font-semibold bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 px-2 py-0.5 rounded-lg"
+                    title="將已存的 YouTube 影片紀錄打包產生雲端分享連結"
+                  >
+                    <Share2 className="w-3 h-3" />
+                    <span>分享紀錄</span>
+                  </button>
+                )}
                 {library.length > 0 && (
                   <button
                     type="button"
