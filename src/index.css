@@ -138,3 +138,41 @@
   animation: shimmer 1.8s infinite ease-in-out;
 }
 
+
+
+/* Mermaid Mindmap & Diagram Styling */
+.mermaid-diagram-container {
+  margin: 1.25rem 0;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(51, 65, 85, 0.7);
+  border-radius: 1rem;
+  overflow-x: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.mermaid-diagram-container svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.mermaid-diagram-container svg text {
+  font-family: 'JetBrains Mono', 'PingFang TC', 'Microsoft JhengHei', sans-serif !important;
+}
+
+.mermaid-timestamp-node {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mermaid-timestamp-node:hover rect,
+.mermaid-timestamp-node:hover polygon,
+.mermaid-timestamp-node:hover circle,
+.mermaid-timestamp-node:hover path {
+  filter: brightness(1.3) drop-shadow(0 0 6px rgba(59, 130, 246, 0.6));
+  stroke: #60a5fa !important;
+  stroke-width: 2px !important;
+}
