@@ -33,7 +33,6 @@ import { Marked } from 'marked';
 import markedKatex from 'marked-katex-extension';
 import 'katex/dist/katex.min.css';
 import DOMPurify from 'dompurify';
-import { renderMermaidWithTimestamps } from '../../utils/mermaidRenderer';
 
 // 初始化支援 KaTeX LaTeX 數學公式解析之 Markdown 解析器
 const markdownParser = new Marked();
@@ -311,139 +310,69 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
     onUpdateTimeRange({ ...timeRange, enabled: true, end: newEnd });
   };
 
-  const [renderedHtml, setRenderedHtml] = useState<string>('');
-
-  // Process markdown, KaTeX math, Mermaid diagrams (with timestamps) and HTML sanitization
-  useEffect(() => {
-    if (!summary) {
-      setRenderedHtml('');
-      return;
+  // Convert timestamps like [01:23] or [01:23:45] into interactive clickable HTML tags
+  const renderedHtml = useMemo(() => {
+    if (!summary) return '';
+    try {
+      let html = markdownParser.parse(summary, { async: false }) as string;
+      const timestampRegex = /\[(\d{1,2}:\d{2}(?::\d{2})?)\]/g;
+      html = html.replace(timestampRegex, (_match, timeStr) => {
+        return `<button type="button" class="timestamp-badge" data-time="${timeStr}">⏱️ ${timeStr}</button>`;
+      });
+      return DOMPurify.sanitize(html, {
+        USE_PROFILES: { html: true, mathMl: true, svg: true },
+        ADD_TAGS: [
+          'button',
+          'annotation',
+          'semantics',
+          'math',
+          'mrow',
+          'mo',
+          'mi',
+          'mn',
+          'mspace',
+          'msup',
+          'msub',
+          'msubsup',
+          'mfrac',
+          'mroot',
+          'msqrt',
+          'mstyle',
+          'mtext',
+          'munder',
+          'mover',
+          'munderover',
+          'mtable',
+          'mtr',
+          'mtd'
+        ],
+        ADD_ATTR: [
+          'data-time',
+          'type',
+          'class',
+          'aria-hidden',
+          'style',
+          'xmlns',
+          'display',
+          'viewBox',
+          'width',
+          'height',
+          'fill',
+          'd'
+        ]
+      });
+    } catch (e) {
+      return summary;
     }
-
-    let isCancelled = false;
-
-    async function processSummary() {
-      try {
-        // Step 1: Detect and replace mermaid code blocks with placeholders
-        const mermaidBlocks: { placeholder: string; code: string }[] = [];
-        let cleanMarkdown = summary;
-        const mermaidRegex = /```mermaid\s*\n([\s\S]*?)```/gi;
-
-        cleanMarkdown = cleanMarkdown.replace(mermaidRegex, (_full, diagramCode) => {
-          const placeholder = `<!--MERMAID_PLACEHOLDER_${mermaidBlocks.length}-->`;
-          mermaidBlocks.push({ placeholder, code: diagramCode.trim() });
-          return placeholder;
-        });
-
-        // Step 2: Parse Markdown & KaTeX
-        let html = markdownParser.parse(cleanMarkdown, { async: false }) as string;
-
-        // Step 3: Convert timestamp tags like [01:23] or [01:23:45] to interactive badges
-        const timestampRegex = /\[(\d{1,2}:\d{2}(?::\d{2})?)\]/g;
-        html = html.replace(timestampRegex, (_match, timeStr) => {
-          return `<button type="button" class="timestamp-badge" data-time="${timeStr}">⏱️ ${timeStr}</button>`;
-        });
-
-        // Step 4: Render any Mermaid blocks (support mindmap, flowchart, graph) and embed interactive nodes
-        for (let i = 0; i < mermaidBlocks.length; i++) {
-          const block = mermaidBlocks[i];
-          const renderRes = await renderMermaidWithTimestamps(block.code, `diag-${i}`);
-          let diagramHtml = '';
-          if (renderRes.svg) {
-            diagramHtml = `<div class="mermaid-diagram-container">${renderRes.svg}</div>`;
-          } else {
-            diagramHtml = `<div class="p-3 my-2 bg-rose-950/40 border border-rose-800/50 rounded-xl text-xs text-rose-300 font-mono">⚠️ Mermaid 繪圖失敗: ${renderRes.error || '語法錯誤'}</div>`;
-          }
-          html = html.replace(block.placeholder, diagramHtml);
-        }
-
-        // Step 5: Sanitize with DOMPurify allowing SVG, MathML, and interactive timestamp attributes
-        const sanitized = DOMPurify.sanitize(html, {
-          USE_PROFILES: { html: true, mathMl: true, svg: true },
-          ADD_TAGS: [
-            'button',
-            'annotation',
-            'semantics',
-            'math',
-            'mrow',
-            'mo',
-            'mi',
-            'mn',
-            'mspace',
-            'msup',
-            'msub',
-            'msubsup',
-            'mfrac',
-            'mroot',
-            'msqrt',
-            'mstyle',
-            'mtext',
-            'munder',
-            'mover',
-            'munderover',
-            'mtable',
-            'mtr',
-            'mtd'
-          ],
-          ADD_ATTR: [
-            'data-time',
-            'type',
-            'class',
-            'aria-hidden',
-            'style',
-            'xmlns',
-            'display',
-            'viewBox',
-            'width',
-            'height',
-            'fill',
-            'd',
-            'transform',
-            'text-anchor',
-            'font-size',
-            'font-family',
-            'font-weight'
-          ]
-        });
-
-        if (!isCancelled) {
-          setRenderedHtml(sanitized);
-        }
-      } catch (e) {
-        if (!isCancelled) {
-          setRenderedHtml(summary);
-        }
-      }
-    }
-
-    processSummary();
-
-    return () => {
-      isCancelled = true;
-    };
   }, [summary]);
 
-  // Click handler to catch timestamp clicks on both text badges and Mermaid SVG nodes
   const handleContentClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // 1. Check if clicked on a standard timestamp button badge
-    const badgeTarget = (e.target as HTMLElement).closest('.timestamp-badge');
-    if (badgeTarget) {
-      const timeStr = badgeTarget.getAttribute('data-time');
+    const target = (e.target as HTMLElement).closest('.timestamp-badge');
+    if (target) {
+      const timeStr = target.getAttribute('data-time');
       if (timeStr) {
         const seconds = parseTimeToSeconds(timeStr);
         onSeek(seconds);
-        return;
-      }
-    }
-
-    // 2. Check if clicked inside a Mermaid mindmap/flowchart SVG node that has data-time
-    const mermaidNode = (e.target as HTMLElement).closest('.mermaid-timestamp-node, [data-time]');
-    if (mermaidNode) {
-      const timeStr = mermaidNode.getAttribute('data-time');
-      if (timeStr) {
-        const seconds = parseTimeToSeconds(timeStr);
-        onSeek(seconds);
-        return;
       }
     }
   };
