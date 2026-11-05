@@ -65,6 +65,7 @@ export interface ProjectConfig {
   playlistVideoIds?: string[];
   loopMode?: LoopMode;
   aiSummary: string;
+  mindMapContent?: string;
   aiKeyPoints: { time: number; label: string; description: string }[];
   updatedAt: string;
 }

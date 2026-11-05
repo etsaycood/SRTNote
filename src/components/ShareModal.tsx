@@ -47,6 +47,7 @@ interface ShareModalProps {
   playlistQueue: string[];
   loopMode: LoopMode;
   aiSummary: string;
+  mindMapContent?: string;
 }
 
 export const ShareModal: React.FC<ShareModalProps> = ({
@@ -61,7 +62,8 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   subtitlesByMedia,
   playlistQueue,
   loopMode,
-  aiSummary
+  aiSummary,
+  mindMapContent
 }) => {
   const [shareMode, setShareMode] = useState<ShareMode>(initialMode);
   const [preferredProvider, setPreferredProvider] = useState<CloudProvider | 'auto'>('auto');
@@ -177,6 +179,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
       slides: [], // 內容不包含簡報
       loopMode,
       aiSummary,
+      mindMapContent,
       aiKeyPoints: [],
       updatedAt: nowIso
     };
@@ -193,6 +196,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     playlistQueue,
     loopMode,
     aiSummary,
+    mindMapContent,
     includeHistorySubtitles
   ]);
 

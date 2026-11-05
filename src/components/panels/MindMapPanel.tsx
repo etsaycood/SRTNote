@@ -17,16 +17,17 @@ import {
   Search,
   Focus,
   Layers,
-  ChevronsRight,
-  ChevronsLeft
+  Copy,
+  Download,
+  Upload
 } from 'lucide-react';
 
 interface MindMapPanelProps {
-  summary: string;
+  mindMapContent: string;
   projectTitle: string;
   currentTime: number;
   onSeek: (seconds: number) => void;
-  onUpdateSummary: (newSummary: string) => void;
+  onUpdateMindMap: (newContent: string) => void;
   isMaximized: boolean;
   onToggleMaximize: () => void;
   onClose?: () => void;
@@ -188,21 +189,22 @@ function collectAllParentIds(root: MindMapNode): Set<string> {
 }
 
 export const MindMapPanel: React.FC<MindMapPanelProps> = ({
-  summary,
+  mindMapContent,
   projectTitle,
   currentTime,
   onSeek,
-  onUpdateSummary,
+  onUpdateMindMap,
   isMaximized,
   onToggleMaximize,
   onClose
 }) => {
   const viewportRef = useRef<HTMLDivElement>(null);
+  const [copied, setCopied] = useState<boolean>(false);
 
   // Parse Markdown or Mermaid mindmap into hierarchical tree
   const rootNode = useMemo(() => {
-    return parseTextToMindMap(summary, projectTitle);
-  }, [summary, projectTitle]);
+    return parseTextToMindMap(mindMapContent, projectTitle);
+  }, [mindMapContent, projectTitle]);
 
   // Default expand level: 2 (shows Root + Level 1 + Level 2; Level 3+ collapsed)
   const [activeExpandPreset, setActiveExpandPreset] = useState<number | 'all'>(2);
@@ -210,18 +212,18 @@ export const MindMapPanel: React.FC<MindMapPanelProps> = ({
     collectExpandedIdsByLevel(rootNode, 2)
   );
 
-  // Re-initialize expanded state when summary structure changes significantly
-  const prevSummaryRef = useRef<string>(summary);
+  // Re-initialize expanded state when mindMapContent structure changes significantly
+  const prevContentRef = useRef<string>(mindMapContent);
   useEffect(() => {
-    if (prevSummaryRef.current !== summary) {
-      prevSummaryRef.current = summary;
+    if (prevContentRef.current !== mindMapContent) {
+      prevContentRef.current = mindMapContent;
       setExpandedIds(
         activeExpandPreset === 'all'
           ? collectAllParentIds(rootNode)
           : collectExpandedIdsByLevel(rootNode, activeExpandPreset)
       );
     }
-  }, [summary, rootNode, activeExpandPreset]);
+  }, [mindMapContent, rootNode, activeExpandPreset]);
 
   // Pan & Zoom State
   const [pan, setPan] = useState<{ x: number; y: number }>({ x: 48, y: 180 });
@@ -247,11 +249,11 @@ export const MindMapPanel: React.FC<MindMapPanelProps> = ({
 
   // Quick Editor Modal/Drawer State
   const [isEditingSource, setIsEditingSource] = useState<boolean>(false);
-  const [draftText, setDraftText] = useState<string>(summary);
+  const [draftText, setDraftText] = useState<string>(mindMapContent);
 
   useEffect(() => {
-    setDraftText(summary);
-  }, [summary]);
+    setDraftText(mindMapContent);
+  }, [mindMapContent]);
 
   // Compute Horizontal Tree Layout for currently expanded nodes
   const layout = useMemo(() => {
@@ -741,8 +743,41 @@ export const MindMapPanel: React.FC<MindMapPanelProps> = ({
 
   // Save edited source text
   const handleSaveDraft = () => {
-    onUpdateSummary(draftText);
+    onUpdateMindMap(draftText);
     setIsEditingSource(false);
+  };
+
+  const handleCopyMindMap = () => {
+    navigator.clipboard.writeText(mindMapContent);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownloadMindMap = () => {
+    const blob = new Blob([mindMapContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${projectTitle || 'mindmap'}_mindmap.mmd`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleUploadMindMapFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const text = event.target?.result as string;
+        if (text) {
+          onUpdateMindMap(text);
+          setIsEditingSource(false);
+        }
+      };
+      reader.readAsText(file);
+    }
   };
 
   const handleInsertSampleMindmap = () => {
@@ -834,7 +869,7 @@ export const MindMapPanel: React.FC<MindMapPanelProps> = ({
             </button>
           </div>
 
-          {/* Search & Source Edit Buttons */}
+          {/* Search & Source Edit / File Buttons */}
           <div className="flex items-center gap-1 bg-slate-900/90 backdrop-blur-md p-1 rounded-xl border border-slate-700/70 shadow-md">
             <button
               type="button"
@@ -857,11 +892,42 @@ export const MindMapPanel: React.FC<MindMapPanelProps> = ({
                   ? 'bg-purple-600 text-white'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
               }`}
-              title="貼上 Mermaid mindmap 或編輯重點文字"
+              title="獨立編輯或貼上心智圖語法 (不影響重點整理)"
             >
               <Edit3 className="w-3.5 h-3.5" />
               <span className="hidden md:inline">貼上/編輯</span>
             </button>
+
+            <button
+              type="button"
+              onClick={handleCopyMindMap}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              title="複製心智圖原始語法"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDownloadMindMap}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              title="下載心智圖語法檔 (.mmd)"
+            >
+              <Download className="w-3.5 h-3.5" />
+            </button>
+
+            <label
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer transition-colors"
+              title="上傳心智圖語法檔 (.mmd/.md/.txt)"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <input
+                type="file"
+                accept=".mmd,.md,.txt"
+                onChange={handleUploadMindMapFile}
+                className="hidden"
+              />
+            </label>
           </div>
         </div>
 

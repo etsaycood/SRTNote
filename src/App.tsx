@@ -51,6 +51,7 @@ export default function App() {
   const [isSlideSyncEnabled, setIsSlideSyncEnabled] = useState<boolean>(true);
   const [manualSlideIndex, setManualSlideIndex] = useState<number>(0);
   const [aiSummary, setAiSummary] = useState<string>(SAMPLE_PROJECT.aiSummary);
+  const [mindMapContent, setMindMapContent] = useState<string>(SAMPLE_PROJECT.mindMapContent || '');
 
   // PDF Conversion State
   const [isConvertingPdf, setIsConvertingPdf] = useState(false);
@@ -199,6 +200,7 @@ export default function App() {
         if (Array.isArray(config.playlistVideoIds)) setPlaylistQueue(config.playlistVideoIds);
         if (config.loopMode) setLoopMode(config.loopMode);
         if (typeof config.aiSummary === 'string') setAiSummary(config.aiSummary);
+        if (typeof config.mindMapContent === 'string') setMindMapContent(config.mindMapContent);
         if (config.mediaDuration && config.mediaDuration > 0) {
           setDuration(config.mediaDuration);
         }
@@ -481,6 +483,7 @@ export default function App() {
         if (c.slides) setSlides(c.slides);
         if (c.slidesByMedia) setSlidesByMedia(c.slidesByMedia);
         if (c.aiSummary) setAiSummary(c.aiSummary);
+        if (c.mindMapContent) setMindMapContent(c.mindMapContent);
         if (c.mediaDuration) setDuration(c.mediaDuration);
       }
 
@@ -575,6 +578,7 @@ export default function App() {
       playlistVideoIds: playlistQueue.length > 0 ? playlistQueue : undefined,
       loopMode,
       aiSummary,
+      mindMapContent,
       aiKeyPoints: [],
       updatedAt: new Date().toISOString()
     };
@@ -877,6 +881,7 @@ export default function App() {
           }
           if (parsed.slidesByMedia) setSlidesByMedia(parsed.slidesByMedia);
           if (parsed.aiSummary) setAiSummary(parsed.aiSummary);
+          if (parsed.mindMapContent) setMindMapContent(parsed.mindMapContent);
           if (parsed.mediaDuration) setDuration(parsed.mediaDuration);
         } catch (err) {
           alert('設定檔格式不符合 JSON 規範');
@@ -902,6 +907,7 @@ export default function App() {
     setSlidesByMedia({});
     setIsSlideSyncEnabled(true);
     setAiSummary(SAMPLE_PROJECT.aiSummary);
+    setMindMapContent(SAMPLE_PROJECT.mindMapContent || '');
     setDuration(SAMPLE_PROJECT.mediaDuration);
     setCurrentTime(0);
     setIsPlaying(false);
@@ -1064,19 +1070,17 @@ export default function App() {
             isMaximized={activeMaximizedPanel === 'summary'}
             onToggleMaximize={() => toggleMaximizePanel('summary')}
             onClose={() => handleClosePanel('summary')}
-            isMindMapOpen={openPanels.includes('mindmap')}
-            onToggleMindMapPanel={() => handleTogglePanel('mindmap')}
           />
         );
 
       case 'mindmap':
         return (
           <MindMapPanel
-            summary={aiSummary}
+            mindMapContent={mindMapContent}
             projectTitle={projectTitle}
             currentTime={currentTime}
             onSeek={handleSeek}
-            onUpdateSummary={setAiSummary}
+            onUpdateMindMap={setMindMapContent}
             isMaximized={activeMaximizedPanel === 'mindmap'}
             onToggleMaximize={() => toggleMaximizePanel('mindmap')}
             onClose={() => handleClosePanel('mindmap')}
@@ -1277,6 +1281,7 @@ export default function App() {
         playlistQueue={playlistQueue}
         loopMode={loopMode}
         aiSummary={aiSummary}
+        mindMapContent={mindMapContent}
       />
     </div>
   );

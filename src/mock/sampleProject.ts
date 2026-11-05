@@ -212,6 +212,25 @@ export const SAMPLE_AI_SUMMARY = `## 📌 會議核心主題與目標
 2. **全體研發團隊**：**週五前**進入跨模組整合測試與高併發壓力測試。
 3. **王經理**：向營運部門同步點數兌換機制進度與上線時程。`;
 
+export const SAMPLE_MIND_MAP = `mindmap
+  root((會員系統改版進度報告))
+    會議目標與時程 [00:00]
+      確認改版上線時程 [00:14]
+        週五前：全模組跨系統整合測試
+        下週二：正式發布上線
+    後端模組開發進度 [00:25]
+      已完成模組 (100%) [00:27]
+        會員登入與第三方註冊
+        個人資料管理 (單元測試覆蓋率 88%)
+        已通過 Code Review 合併主線 [00:33]
+      進行中模組 (70%) [00:35]
+        點數兌換與交易紀錄
+        技術瓶頸：舊 Oracle 資料庫相容問題 [00:48]
+        解決方案：開發專用轉接層與快取機制 (週三完成)
+    前端與行動端 UI [00:55]
+      全新設計系統更新完成
+      行動端響應式 UI 已就緒`;
+
 export const SAMPLE_PROJECT: ProjectConfig = {
   version: '1.0.0',
   title: '會員系統改版進度報告週會',
@@ -220,6 +239,7 @@ export const SAMPLE_PROJECT: ProjectConfig = {
   subtitles: SAMPLE_SUBTITLES,
   slides: SAMPLE_SLIDES,
   aiSummary: SAMPLE_AI_SUMMARY,
+  mindMapContent: SAMPLE_MIND_MAP,
   aiKeyPoints: [
     { time: 0, label: '會議開場', description: '確認會員系統改版上線時程' },
     { time: 27, label: '核心模組', description: '登入、註冊與個人資料模組完成' },
