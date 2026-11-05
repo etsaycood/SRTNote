@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { PanelId } from '../types';
-import { Move, Video, Presentation, FileText, Sparkles, Plus, RotateCcw } from 'lucide-react';
+import { Move, Video, Presentation, FileText, Sparkles, Plus, RotateCcw, Network } from 'lucide-react';
 
 interface WorkspaceGridProps {
   openPanels: PanelId[];
@@ -258,7 +258,8 @@ export const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({
       { id: 'video', title: '影音視窗 (Video)', icon: Video, color: 'text-blue-400 border-blue-500/30 hover:border-blue-500' },
       { id: 'slides', title: '同步簡報 (Slides)', icon: Presentation, color: 'text-emerald-400 border-emerald-500/30 hover:border-emerald-500' },
       { id: 'transcript', title: '即時逐字稿 (Transcript)', icon: FileText, color: 'text-amber-400 border-amber-500/30 hover:border-amber-500' },
-      { id: 'summary', title: 'AI 重點整理 (AI Summary)', icon: Sparkles, color: 'text-purple-400 border-purple-500/30 hover:border-purple-500' }
+      { id: 'summary', title: 'AI 重點整理 (AI Summary)', icon: Sparkles, color: 'text-purple-400 border-purple-500/30 hover:border-purple-500' },
+      { id: 'mindmap', title: '互動心智圖 (Mind Map)', icon: Network, color: 'text-cyan-400 border-cyan-500/30 hover:border-cyan-500' }
     ];
 
     return (
@@ -390,7 +391,64 @@ export const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({
     );
   }
 
-  // 6. Default: All 4 Panels Open (2x2 Grid)
+  // 6. All 5 Panels Open: Top Row 2 Panels, Bottom Row 3 Panels
+  if (openPanels.length >= 5) {
+    const p0 = openPanels[0];
+    const p1 = openPanels[1];
+    const p2 = openPanels[2];
+    const p3 = openPanels[3];
+    const p4 = openPanels[4];
+
+    return (
+      <div
+        ref={containerRef}
+        className="relative w-full h-full flex flex-col p-2 select-none overflow-hidden"
+      >
+        {/* Top Half Row (2 Panels) */}
+        <div
+          className="w-full flex min-h-[160px] overflow-hidden"
+          style={{ height: `${topHeightPercent}%` }}
+        >
+          <div className="h-full pr-1 overflow-hidden" style={{ width: `${topLeftWidthPercent}%` }}>
+            {renderSlot(p0)}
+          </div>
+
+          <div
+            onMouseDown={startResizeTopLeftRight}
+            className="w-2.5 h-full flex items-center justify-center cursor-col-resize hover:bg-blue-500/20 active:bg-blue-500/40 rounded-full transition-colors group z-20"
+            title="拖曳調整左右寬度比例"
+          >
+            <div className="w-1 h-8 rounded-full bg-slate-700 group-hover:bg-blue-400 transition-colors" />
+          </div>
+
+          <div className="h-full pl-1 flex-1 overflow-hidden" style={{ width: `${100 - topLeftWidthPercent}%` }}>
+            {renderSlot(p1)}
+          </div>
+        </div>
+
+        {/* Horizontal Resizer */}
+        <div
+          onMouseDown={startResizeTopBottom}
+          className="w-full h-2.5 flex items-center justify-center cursor-row-resize hover:bg-blue-500/20 active:bg-blue-500/40 rounded-full my-0.5 transition-colors group z-20"
+          title="拖曳調整上下高度比例"
+        >
+          <div className="h-1 w-16 rounded-full bg-slate-700 group-hover:bg-blue-400 transition-colors" />
+        </div>
+
+        {/* Bottom Half Row (3 Panels) */}
+        <div
+          className="w-full grid grid-cols-3 gap-2 min-h-[160px] flex-1 overflow-hidden"
+          style={{ height: `${100 - topHeightPercent}%` }}
+        >
+          <div className="h-full overflow-hidden">{renderSlot(p2)}</div>
+          <div className="h-full overflow-hidden">{renderSlot(p3)}</div>
+          <div className="h-full overflow-hidden">{renderSlot(p4)}</div>
+        </div>
+      </div>
+    );
+  }
+
+  // 7. Default: 4 Panels Open (2x2 Grid)
   const p0 = openPanels[0] || 'video';
   const p1 = openPanels[1] || 'slides';
   const p2 = openPanels[2] || 'transcript';

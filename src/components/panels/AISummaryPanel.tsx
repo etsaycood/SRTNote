@@ -27,7 +27,8 @@ import {
   Play,
   SlidersHorizontal,
   ChevronDown,
-  Settings
+  Settings,
+  Network
 } from 'lucide-react';
 import { Marked } from 'marked';
 import markedKatex from 'marked-katex-extension';
@@ -59,6 +60,8 @@ interface AISummaryPanelProps {
   isMaximized: boolean;
   onToggleMaximize: () => void;
   onClose?: () => void;
+  isMindMapOpen?: boolean;
+  onToggleMindMapPanel?: () => void;
 }
 
 export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
@@ -75,7 +78,9 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
   onUpdateLMConfig,
   isMaximized,
   onToggleMaximize,
-  onClose
+  onClose,
+  isMindMapOpen = false,
+  onToggleMindMapPanel
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [statusText, setStatusText] = useState<string>('');
@@ -414,6 +419,23 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
                 <Wand2 className="w-3.5 h-3.5" />
                 <span>AI</span>
                 <ChevronDown className="w-3 h-3 text-purple-200" />
+              </button>
+            )}
+
+            {/* 開啟/切換互動心智圖面板按鈕 */}
+            {onToggleMindMapPanel && (
+              <button
+                type="button"
+                onClick={onToggleMindMapPanel}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
+                  isMindMapOpen
+                    ? 'bg-cyan-600/30 text-cyan-300 border border-cyan-500/40'
+                    : 'text-cyan-400 hover:text-white hover:bg-slate-800'
+                }`}
+                title={isMindMapOpen ? '關閉互動心智圖面板' : '開啟「互動心智圖」面板'}
+              >
+                <Network className="w-3.5 h-3.5" />
+                <span>心智圖</span>
               </button>
             )}
 

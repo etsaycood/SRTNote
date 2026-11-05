@@ -31,7 +31,7 @@ export interface LMStudioConfig {
   contextWindow?: number; // Maximum safe context window in tokens (e.g. 4096, 8192, 16384)
 }
 
-export type PanelId = 'video' | 'slides' | 'transcript' | 'summary';
+export type PanelId = 'video' | 'slides' | 'transcript' | 'summary' | 'mindmap';
 
 export type LayoutPreset = '2x2' | 'split-vertical' | 'slides-focus' | 'transcript-focus';
 

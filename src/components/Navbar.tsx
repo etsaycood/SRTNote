@@ -21,7 +21,8 @@ import {
   Clipboard,
   Settings,
   Smartphone,
-  Share2
+  Share2,
+  Network
 } from 'lucide-react';
 import { YoutubeIcon } from './icons/YoutubeIcon';
 
@@ -98,7 +99,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     video: '影音視窗',
     slides: '同步簡報',
     transcript: '即時逐字稿',
-    summary: '重點整理'
+    summary: '重點整理',
+    mindmap: '互動心智圖'
   };
 
   return (
@@ -276,6 +278,23 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         )}
 
+        {/* 互動心智圖面板快捷開關按鈕 (Icon only) */}
+        <button
+          onClick={() => onTogglePanel('mindmap')}
+          className={`p-2 rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center ${
+            openPanels.includes('mindmap')
+              ? 'bg-cyan-600/30 text-cyan-300 border border-cyan-500/50 shadow-sm ring-1 ring-cyan-500/30'
+              : 'bg-slate-800 hover:bg-slate-700 text-cyan-400 hover:text-cyan-300 border border-slate-700'
+          }`}
+          title={
+            openPanels.includes('mindmap')
+              ? '互動心智圖面板：已開啟 (點擊關閉)'
+              : '開啟「互動心智圖」面板 (可收合展開、縮放與時間戳跳轉)'
+          }
+        >
+          <Network className="w-4 h-4" />
+        </button>
+
         {/* 手機模式按鈕 (Icon only) */}
         {onToggleMobileMode && (
           <button
@@ -353,7 +372,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     版面視窗開關
                   </span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400">
-                    {openPanels.length}/4 開啟
+                    {openPanels.length}/5 開啟
                   </span>
                 </div>
 
@@ -362,7 +381,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                     { id: 'video' as PanelId, title: '影音視窗', icon: Video, color: 'text-blue-400' },
                     { id: 'slides' as PanelId, title: '同步簡報', icon: Presentation, color: 'text-emerald-400' },
                     { id: 'transcript' as PanelId, title: '即時逐字稿', icon: FileText, color: 'text-amber-400' },
-                    { id: 'summary' as PanelId, title: '重點整理', icon: Sparkles, color: 'text-purple-400' }
+                    { id: 'summary' as PanelId, title: '重點整理', icon: Sparkles, color: 'text-purple-400' },
+                    { id: 'mindmap' as PanelId, title: '互動心智圖', icon: Network, color: 'text-cyan-400' }
                   ].map((p) => {
                     const isOpen = openPanels.includes(p.id);
                     const Icon = p.icon;

@@ -19,6 +19,7 @@ import { VideoPanel } from './components/panels/VideoPanel';
 import { SlidePanel } from './components/panels/SlidePanel';
 import { TranscriptPanel } from './components/panels/TranscriptPanel';
 import { AISummaryPanel } from './components/panels/AISummaryPanel';
+import { MindMapPanel } from './components/panels/MindMapPanel';
 import { LMStudioModal } from './components/LMStudioModal';
 import { SlideTimelineModal } from './components/SlideTimelineModal';
 import { YouTubeModal } from './components/YouTubeModal';
@@ -1063,6 +1064,22 @@ export default function App() {
             isMaximized={activeMaximizedPanel === 'summary'}
             onToggleMaximize={() => toggleMaximizePanel('summary')}
             onClose={() => handleClosePanel('summary')}
+            isMindMapOpen={openPanels.includes('mindmap')}
+            onToggleMindMapPanel={() => handleTogglePanel('mindmap')}
+          />
+        );
+
+      case 'mindmap':
+        return (
+          <MindMapPanel
+            summary={aiSummary}
+            projectTitle={projectTitle}
+            currentTime={currentTime}
+            onSeek={handleSeek}
+            onUpdateSummary={setAiSummary}
+            isMaximized={activeMaximizedPanel === 'mindmap'}
+            onToggleMaximize={() => toggleMaximizePanel('mindmap')}
+            onClose={() => handleClosePanel('mindmap')}
           />
         );
 

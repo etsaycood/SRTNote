@@ -8,7 +8,8 @@ import {
   Plus,
   RotateCcw,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Network
 } from 'lucide-react';
 
 interface MobileWorkspaceGridProps {
@@ -25,7 +26,8 @@ const PANEL_META: Record<PanelId, { name: string; icon: React.FC<{ className?: s
   video: { name: '影音視窗', icon: Video },
   slides: { name: '同步簡報', icon: Presentation },
   transcript: { name: '即時逐字稿', icon: FileText },
-  summary: { name: '重點整理', icon: Sparkles }
+  summary: { name: '重點整理', icon: Sparkles },
+  mindmap: { name: '互動心智圖', icon: Network }
 };
 
 interface SwipeablePaneProps {
@@ -240,11 +242,11 @@ export const MobileWorkspaceGrid: React.FC<MobileWorkspaceGridProps> = ({
     );
   }
 
-  // 2. Partition open panels into Top Pane (Visual/Media) and Bottom Pane (Text/Notes)
+  // 2. Partition open panels into Top Pane (Visual/Media) and Bottom Pane (Text/Notes/MindMap)
   // Top defaults to 'video' and 'slides'
   const topPanels = openPanels.filter((id) => id === 'video' || id === 'slides');
-  // Bottom defaults to 'transcript' and 'summary'
-  const bottomPanels = openPanels.filter((id) => id === 'transcript' || id === 'summary');
+  // Bottom defaults to 'transcript', 'summary', and 'mindmap'
+  const bottomPanels = openPanels.filter((id) => id === 'transcript' || id === 'summary' || id === 'mindmap');
 
   // If no panels are open anywhere
   if (openPanels.length === 0) {
@@ -291,7 +293,7 @@ export const MobileWorkspaceGrid: React.FC<MobileWorkspaceGridProps> = ({
         <SwipeablePane
           paneTitle="下窗格"
           panels={bottomPanels}
-          availableSiblingPanels={['transcript', 'summary']}
+          availableSiblingPanels={['transcript', 'summary', 'mindmap']}
           renderPanel={renderPanel}
           onReopenPanel={onReopenPanel}
           accentColor="purple"
@@ -378,7 +380,7 @@ export const MobileWorkspaceGrid: React.FC<MobileWorkspaceGridProps> = ({
         <SwipeablePane
           paneTitle="下窗格"
           panels={bottomPanels}
-          availableSiblingPanels={['transcript', 'summary']}
+          availableSiblingPanels={['transcript', 'summary', 'mindmap']}
           renderPanel={renderPanel}
           onReopenPanel={onReopenPanel}
           accentColor="purple"
