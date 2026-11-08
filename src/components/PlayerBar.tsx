@@ -10,8 +10,10 @@ import {
   Volume2,
   VolumeX,
   Repeat,
-  Repeat1
+  Repeat1,
+  ChevronDown
 } from 'lucide-react';
+import { Language } from '../utils/i18n';
 
 interface PlayerBarProps {
   isPlaying: boolean;
@@ -34,6 +36,8 @@ interface PlayerBarProps {
   onChangeVolume: (vol: number) => void;
   onToggleMute: () => void;
   isMobile?: boolean;
+  onToggleCollapse?: () => void;
+  lang?: Language;
 }
 
 export const PlayerBar: React.FC<PlayerBarProps> = ({
@@ -56,7 +60,9 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
   onChangePlaybackRate,
   onChangeVolume,
   onToggleMute,
-  isMobile = false
+  isMobile = false,
+  onToggleCollapse,
+  lang = 'zh'
 }) => {
   const activeLoopMode: LoopMode = loopMode || (isLooping ? 'single' : 'off');
   const scrubberRef = React.useRef<HTMLDivElement>(null);
@@ -236,7 +242,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
       <button
         onClick={onPlayPause}
         className="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-blue-600 hover:bg-blue-500 text-white rounded-full transition-all shadow-lg shadow-blue-600/30 active:scale-95 group"
-        title={isPlaying ? '暫停 (Space)' : '播放 (Space)'}
+        title={isPlaying ? (lang === 'en' ? 'Pause (Space)' : '暫停 (Space)') : (lang === 'en' ? 'Play (Space)' : '播放 (Space)')}
       >
         {isPlaying ? (
           <Pause className="w-5 h-5 fill-current" />
@@ -250,14 +256,14 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         <button
           onClick={() => handleSkip(-5)}
           className="p-1.5 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-          title="倒退 5 秒"
+          title={lang === 'en' ? 'Rewind 5s' : '倒退 5 秒'}
         >
           <RotateCcw className="w-4 h-4" />
         </button>
         <button
           onClick={() => handleSkip(5)}
           className="p-1.5 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-          title="快進 5 秒"
+          title={lang === 'en' ? 'Forward 5s' : '快進 5 秒'}
         >
           <RotateCw className="w-4 h-4" />
         </button>
@@ -272,7 +278,13 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
                 : 'hover:text-white hover:bg-slate-800'
             }`}
             title={
-              activeLoopMode === 'single'
+              lang === 'en'
+                ? activeLoopMode === 'single'
+                  ? 'Repeat: Loop Single (Click for Loop All)'
+                  : activeLoopMode === 'all'
+                  ? 'Repeat: Loop All (Click to turn off)'
+                  : 'Repeat: Off (Click for Loop Single)'
+                : activeLoopMode === 'single'
                 ? '重複播放：單曲循環 (點擊切換為全部循環)'
                 : activeLoopMode === 'all'
                 ? '重複播放：全部循環 (點擊關閉循環)'
@@ -326,7 +338,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
           value={playbackRate}
           onChange={(e) => onChangePlaybackRate(parseFloat(e.target.value))}
           className="bg-slate-800 text-slate-200 text-xs rounded-lg px-2 py-1.5 border border-slate-700 focus:outline-none focus:border-blue-500 cursor-pointer font-mono"
-          title="播放倍速"
+          title={lang === 'en' ? 'Playback Speed' : '播放倍速'}
         >
           <option value="0.75">0.75x</option>
           <option value="1">1.0x</option>
@@ -341,7 +353,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
         <button
           onClick={onToggleMute}
           className="hover:text-white transition-colors"
-          title={isMuted ? '取消靜音' : '靜音'}
+          title={isMuted ? (lang === 'en' ? 'Unmute' : '取消靜音') : (lang === 'en' ? 'Mute' : '靜音')}
         >
           {isMuted || volume === 0 ? (
             <VolumeX className="w-4 h-4 text-rose-400" />
@@ -357,9 +369,20 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({
           value={isMuted ? 0 : volume}
           onChange={(e) => onChangeVolume(parseFloat(e.target.value))}
           className="w-16 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
-          title={`音量: ${Math.round(volume * 100)}%`}
+          title={`${lang === 'en' ? 'Volume' : '音量'}: ${Math.round(volume * 100)}%`}
         />
       </div>
+
+      {/* Collapse / Hide Playbar button */}
+      {onToggleCollapse && (
+        <button
+          onClick={onToggleCollapse}
+          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors flex-shrink-0"
+          title={lang === 'en' ? 'Hide player bar (Maximize space)' : '隱藏底端播放列 (最大化視窗空間，可隨時復原)'}
+        >
+          <ChevronDown className="w-4 h-4" />
+        </button>
+      )}
     </div>
   );
 };

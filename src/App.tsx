@@ -1,5 +1,36 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { PanelId, LayoutPreset, SubtitleItem, SlideItem, ProjectConfig, LMStudioConfig, TimeRange, MediaType, LoopMode, ShareMode } from './types';
+import {
+  PanelId,
+  LayoutPreset,
+  SubtitleItem,
+  SlideItem,
+  ProjectConfig,
+  LMStudioConfig,
+  TimeRange,
+  MediaType,
+  LoopMode,
+  ShareMode,
+  DockLayoutConfig,
+  DockLayoutPreset
+} from './types';
+import {
+  loadDockLayoutFromStorage,
+  saveDockLayoutToStorage,
+  getDefaultDockLayout,
+  DOCK_LAYOUT_PRESETS,
+  removePanelFromLayout,
+  addOrFocusPanel,
+  getOpenPanelsFromLayout,
+  ALL_PANELS
+} from './utils/dockLayout';
+import {
+  getSavedTheme,
+  applyTheme,
+  getSavedLanguage,
+  setSavedLanguage,
+  Theme,
+  Language
+} from './utils/i18n';
 import { SAMPLE_PROJECT } from './mock/sampleProject';
 import { DEFAULT_LM_STUDIO_CONFIG } from './utils/lmStudioClient';
 import { parseSubtitleContent } from './utils/srtParser';
@@ -27,7 +58,7 @@ import { extractYouTubeId, mergeSharedYouTubeLibrary } from './utils/youtubeHelp
 import { PasteTranscriptModal } from './components/PasteTranscriptModal';
 import { ShareModal } from './components/ShareModal';
 import { fetchSharedConfig } from './utils/cloudShare';
-import { Loader2, CheckCircle2, AlertCircle, ExternalLink, X, ListVideo } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle, ExternalLink, X, ListVideo, ChevronUp } from 'lucide-react';
 
 // Helper to detect non-PC devices (mobile phones or tablets)
 const detectNonPC = () => {
@@ -97,24 +128,57 @@ export default function App() {
     return detectNonPC();
   });
 
-  // --- Panel Layout & Open State ---
-  // Default positions: [TopLeft, TopRight, BottomLeft, BottomRight]
-  const [panelPositions, setPanelPositions] = useState<PanelId[]>([
-    'video',
-    'slides',
-    'transcript',
-    'summary'
-  ]);
-  const [openPanels, setOpenPanels] = useState<PanelId[]>(() => {
-    const saved = localStorage.getItem('srtnote_mobile_mode');
-    const isMobileInitial = saved !== null ? saved === 'true' : detectNonPC();
-    // 預設非電腦/手機模式下只開啟「影音視窗」及「即時逐字稿」分別在上下窗格
-    if (isMobileInitial) {
-      return ['video', 'transcript'];
-    }
-    return ['video', 'slides', 'transcript', 'summary'];
+  // --- Dock Layout (Desktop Workbench) State ---
+  const [dockLayout, setDockLayout] = useState<DockLayoutConfig>(() => {
+    return loadDockLayoutFromStorage();
+  });
+  const [mobilePanels, setMobilePanels] = useState<PanelId[]>(() => {
+    return ['video', 'transcript'];
   });
   const [activeMaximizedPanel, setActiveMaximizedPanel] = useState<PanelId | null>(null);
+
+  // --- Bottom PlayerBar Visibility State ---
+  const [showPlayerBar, setShowPlayerBar] = useState<boolean>(() => {
+    const saved = localStorage.getItem('srtnote_show_player_bar');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  const handleTogglePlayerBar = () => {
+    setShowPlayerBar((prev) => {
+      const next = !prev;
+      localStorage.setItem('srtnote_show_player_bar', String(next));
+      return next;
+    });
+  };
+
+  // --- Theme (Dark / Light) State ---
+  const [theme, setTheme] = useState<Theme>(getSavedTheme);
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+
+  const handleToggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    applyTheme(next);
+  };
+
+  // --- Language (zh / en) State ---
+  const [lang, setLang] = useState<Language>(getSavedLanguage);
+  const handleToggleLanguage = () => {
+    const next = lang === 'zh' ? 'en' : 'zh';
+    setLang(next);
+    setSavedLanguage(next);
+  };
+
+  const openPanels = useMemo(() => {
+    if (isMobileMode) {
+      return mobilePanels;
+    }
+    return getOpenPanelsFromLayout(dockLayout);
+  }, [isMobileMode, mobilePanels, dockLayout]);
+
+  const panelPositions = openPanels;
 
   // Auto-detect resize if user hasn't explicitly locked preference
   useEffect(() => {
@@ -134,7 +198,7 @@ export default function App() {
       localStorage.setItem('srtnote_mobile_mode', String(next));
       if (next) {
         // Switching to mobile mode: ensure video and transcript are open
-        setOpenPanels((current) => {
+        setMobilePanels((current) => {
           const hasVideo = current.includes('video');
           const hasTranscript = current.includes('transcript');
           if (!hasVideo && !hasTranscript) {
@@ -175,7 +239,8 @@ export default function App() {
     if (!shareParam) return;
 
     // 選項 1-A：當開啟分享連結時，自動將「同步簡報」面板關閉隱藏
-    setOpenPanels((prev) => prev.filter((id) => id !== 'slides'));
+    setDockLayout((prev) => removePanelFromLayout(prev, 'slides'));
+    setMobilePanels((prev) => prev.filter((id) => id !== 'slides'));
 
     let cancelled = false;
     setSharedBanner({
@@ -915,42 +980,46 @@ export default function App() {
 
   // --- Layout Handlers ---
   const handleSwapPanels = (idA: PanelId, idB: PanelId) => {
-    setOpenPanels((prev) => {
-      const copy = [...prev];
-      const idxA = copy.indexOf(idA);
-      const idxB = copy.indexOf(idB);
-      if (idxA !== -1 && idxB !== -1) {
-        const temp = copy[idxA];
-        copy[idxA] = copy[idxB];
-        copy[idxB] = temp;
-      }
-      return copy;
-    });
-    setPanelPositions((prev) => {
-      const copy = [...prev];
-      const idxA = copy.indexOf(idA);
-      const idxB = copy.indexOf(idB);
-      if (idxA !== -1 && idxB !== -1) {
-        const temp = copy[idxA];
-        copy[idxA] = copy[idxB];
-        copy[idxB] = temp;
-      }
-      return copy;
-    });
+    if (isMobileMode) {
+      setMobilePanels((prev) => {
+        const copy = [...prev];
+        const idxA = copy.indexOf(idA);
+        const idxB = copy.indexOf(idB);
+        if (idxA !== -1 && idxB !== -1) {
+          const temp = copy[idxA];
+          copy[idxA] = copy[idxB];
+          copy[idxB] = temp;
+        }
+        return copy;
+      });
+    }
   };
 
   const handleClosePanel = (panelId: PanelId) => {
-    setOpenPanels((prev) => prev.filter((id) => id !== panelId));
+    if (isMobileMode) {
+      setMobilePanels((prev) => prev.filter((id) => id !== panelId));
+    } else {
+      setDockLayout((prev) => {
+        const next = removePanelFromLayout(prev, panelId);
+        saveDockLayoutToStorage(next);
+        return next;
+      });
+    }
     if (activeMaximizedPanel === panelId) {
       setActiveMaximizedPanel(null);
     }
   };
 
   const handleOpenPanel = (panelId: PanelId) => {
-    setOpenPanels((prev) => {
-      if (prev.includes(panelId)) return prev;
-      return [...prev, panelId];
-    });
+    if (isMobileMode) {
+      setMobilePanels((prev) => (prev.includes(panelId) ? prev : [...prev, panelId]));
+    } else {
+      setDockLayout((prev) => {
+        const next = addOrFocusPanel(prev, panelId);
+        saveDockLayoutToStorage(next);
+        return next;
+      });
+    }
   };
 
   const handleTogglePanel = (panelId: PanelId) => {
@@ -962,24 +1031,45 @@ export default function App() {
   };
 
   const handleOpenAllPanels = () => {
-    const all: PanelId[] = ['video', 'slides', 'transcript', 'summary'];
-    setOpenPanels(all);
-    setPanelPositions(all);
+    if (isMobileMode) {
+      setMobilePanels(['video', 'slides', 'transcript', 'summary', 'mindmap']);
+    } else {
+      setDockLayout((prev) => {
+        let next = { ...prev };
+        ALL_PANELS.forEach((p) => {
+          next = addOrFocusPanel(next, p);
+        });
+        saveDockLayoutToStorage(next);
+        return next;
+      });
+    }
   };
 
   const handleResetLayout = () => {
     if (isMobileMode) {
-      setOpenPanels(['video', 'transcript']);
+      setMobilePanels(['video', 'transcript']);
       setActiveMaximizedPanel(null);
     } else {
-      const all: PanelId[] = ['video', 'slides', 'transcript', 'summary'];
-      setOpenPanels(all);
-      setPanelPositions(all);
+      const defaultLayout = getDefaultDockLayout();
+      setDockLayout(defaultLayout);
+      saveDockLayoutToStorage(defaultLayout);
       setActiveMaximizedPanel(null);
     }
   };
 
-  const toggleMaximizePanel = (panelId: PanelId) => {
+  const handleSelectPreset = (presetKey: DockLayoutPreset) => {
+    const presetConfig = JSON.parse(JSON.stringify(DOCK_LAYOUT_PRESETS[presetKey].config));
+    setDockLayout(presetConfig);
+    saveDockLayoutToStorage(presetConfig);
+    setActiveMaximizedPanel(null);
+  };
+
+  const handleDockLayoutChange = (newLayout: DockLayoutConfig) => {
+    setDockLayout(newLayout);
+    saveDockLayoutToStorage(newLayout);
+  };
+
+  const toggleMaximizePanel = (panelId: PanelId | null) => {
     setActiveMaximizedPanel((prev) => (prev === panelId ? null : panelId));
   };
 
@@ -1050,6 +1140,7 @@ export default function App() {
             onUploadSubtitles={handleUploadSubtitles}
             onOpenPasteModal={() => setIsPasteTranscriptModalOpen(true)}
             currentMediaId={mediaType === 'youtube' && mediaUrl ? extractYouTubeId(mediaUrl) || undefined : undefined}
+            theme={theme}
           />
         );
 
@@ -1084,6 +1175,7 @@ export default function App() {
             isMaximized={activeMaximizedPanel === 'mindmap'}
             onToggleMaximize={() => toggleMaximizePanel('mindmap')}
             onClose={() => handleClosePanel('mindmap')}
+            theme={theme}
           />
         );
 
@@ -1121,6 +1213,13 @@ export default function App() {
         onOpenShareModal={() => handleOpenShareModal('current_note')}
         isMobileMode={isMobileMode}
         onToggleMobileMode={handleToggleMobileMode}
+        onSelectPreset={handleSelectPreset}
+        showPlayerBar={showPlayerBar}
+        onTogglePlayerBar={handleTogglePlayerBar}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+        lang={lang}
+        onToggleLanguage={handleToggleLanguage}
       />
 
       {/* Cloud Share Status Banner */}
@@ -1190,19 +1289,24 @@ export default function App() {
           />
         ) : (
           <WorkspaceGrid
-            openPanels={openPanels}
-            activeMaximizedPanel={activeMaximizedPanel}
-            onSwapPanels={handleSwapPanels}
+            layout={dockLayout}
+            onChangeLayout={handleDockLayoutChange}
             renderPanel={renderPanel}
-            onReopenPanel={handleOpenPanel}
+            activeMaximizedPanel={activeMaximizedPanel}
+            onToggleMaximizePanel={toggleMaximizePanel}
             onResetLayout={handleResetLayout}
+            onSelectPreset={handleSelectPreset}
+            openPanels={openPanels}
+            onSwapPanels={handleSwapPanels}
+            onReopenPanel={handleOpenPanel}
+            lang={lang}
           />
         )}
       </main>
 
-      {/* 3. Bottom Master Playback Bar (Hidden in mobile mode when playing YouTube or Video, since they have their own in-pane controls) */}
-      {(!isMobileMode || mediaType === 'audio') && (
-        <footer className="w-full px-2 sm:px-4 pb-2 sm:pb-3 pt-1 flex-shrink-0">
+      {/* 3. Bottom Master Playback Bar (Hidden when collapsed or in mobile mode with video) */}
+      {showPlayerBar && (!isMobileMode || mediaType === 'audio') && (
+        <footer className="w-full px-2 sm:px-4 pb-1.5 sm:pb-2 pt-0.5 flex-shrink-0 animate-fade-in">
           <PlayerBar
             isPlaying={isPlaying}
             currentTime={currentTime}
@@ -1223,6 +1327,8 @@ export default function App() {
             onChangeVolume={setVolume}
             onToggleMute={() => setIsMuted(!isMuted)}
             isMobile={isMobileMode}
+            onToggleCollapse={handleTogglePlayerBar}
+            lang={lang}
           />
         </footer>
       )}

@@ -138,3 +138,178 @@
   animation: shimmer 1.8s infinite ease-in-out;
 }
 
+/* Clean up docked workbench panels by hiding duplicate floating window controls & titles */
+.dock-workbench .legacy-window-ctrl {
+  display: none !important;
+}
+
+.dock-workbench .legacy-title-badge {
+  display: none !important;
+}
+
+/* ========================================================
+   Light Theme (亮色版面模式) Overrides
+   ======================================================== */
+html.light,
+html.light body {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+html.light .bg-slate-950 {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+html.light .bg-slate-900 {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+}
+
+html.light .bg-slate-900\/95,
+html.light .bg-slate-900\/90,
+html.light .bg-slate-900\/85,
+html.light .bg-slate-900\/80,
+html.light .bg-slate-900\/60,
+html.light .bg-slate-900\/40 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  color: #1e293b !important;
+}
+
+html.light .bg-slate-950\/95,
+html.light .bg-slate-950\/90,
+html.light .bg-slate-950\/85,
+html.light .bg-slate-950\/80,
+html.light .bg-slate-950\/60,
+html.light .bg-slate-950\/40 {
+  background-color: rgba(248, 250, 252, 0.96) !important;
+  color: #0f172a !important;
+}
+
+html.light .bg-slate-800,
+html.light .bg-slate-800\/80,
+html.light .bg-slate-800\/90 {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+html.light .border-slate-800,
+html.light .border-slate-800\/90,
+html.light .border-slate-800\/80 {
+  border-color: #e2e8f0 !important;
+}
+
+html.light .border-slate-700,
+html.light .border-slate-700\/80,
+html.light .border-slate-700\/70,
+html.light .border-slate-700\/60 {
+  border-color: #cbd5e1 !important;
+}
+
+html.light .text-slate-100,
+html.light .text-slate-200 {
+  color: #0f172a !important;
+}
+
+/* Ensure text on slate panels becomes dark in light mode, but preserve white text on colored buttons/badges */
+html.light .text-white:not(.force-white):not(.btn-primary):not([class*="bg-blue-"]):not([class*="bg-indigo-"]):not([class*="bg-cyan-"]):not([class*="bg-purple-"]):not([class*="bg-emerald-"]):not([class*="bg-rose-"]):not([class*="bg-amber-"]) {
+  color: #0f172a !important;
+}
+
+html.light .force-white,
+html.light .text-white.force-white,
+html.light [class*="bg-blue-600"] .text-white,
+html.light [class*="bg-indigo-600"] .text-white,
+html.light [class*="bg-cyan-600"] .text-white {
+  color: #ffffff !important;
+}
+
+html.light .text-slate-300,
+html.light .text-slate-400 {
+  color: #475569 !important;
+}
+
+html.light .text-slate-500 {
+  color: #64748b !important;
+}
+
+/* Contrast enhancement for colored badges and accents in light mode */
+html.light .text-cyan-300,
+html.light .text-cyan-400 {
+  color: #0891b2 !important;
+}
+
+html.light .text-blue-300,
+html.light .text-blue-400 {
+  color: #2563eb !important;
+}
+
+html.light .bg-cyan-600\/30 {
+  background-color: #cffafe !important;
+  border-color: #06b6d4 !important;
+  color: #0891b2 !important;
+}
+
+html.light .bg-blue-600\/30 {
+  background-color: #dbeafe !important;
+  border-color: #3b82f6 !important;
+  color: #1d4ed8 !important;
+}
+
+html.light .bg-slate-850\/50 {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+html.light .hover\:bg-slate-800:hover,
+html.light .hover\:bg-slate-800\/90:hover,
+html.light .hover\:bg-slate-800\/80:hover,
+html.light .hover\:bg-slate-700:hover,
+html.light .hover\:bg-slate-700\/80:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+html.light .custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9 !important;
+}
+
+html.light .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1 !important;
+}
+
+html.light .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8 !important;
+}
+
+html.light .markdown-body h1,
+html.light .markdown-body h2,
+html.light .markdown-body h3,
+html.light .markdown-body strong {
+  color: #0f172a !important;
+}
+
+html.light .markdown-body p,
+html.light .markdown-body li,
+html.light .markdown-body span {
+  color: #334155 !important;
+}
+
+html.light .markdown-body .katex {
+  color: #0f172a !important;
+}
+
+html.light .markdown-body blockquote {
+  background-color: #f1f5f9 !important;
+  border-left-color: #3b82f6 !important;
+  color: #334155 !important;
+}
+
+html.light input,
+html.light textarea,
+html.light select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+

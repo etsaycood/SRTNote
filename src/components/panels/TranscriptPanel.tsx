@@ -32,6 +32,7 @@ interface TranscriptPanelProps {
   onUploadSubtitles: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onOpenPasteModal?: () => void;
   currentMediaId?: string;
+  theme?: 'dark' | 'light';
 }
 
 export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
@@ -44,12 +45,19 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
   onClose,
   onUploadSubtitles,
   onOpenPasteModal,
-  currentMediaId
+  currentMediaId,
+  theme
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
   const [autoScroll, setAutoScroll] = useState(true);
+
+  // Check if active theme is light
+  const isLight =
+    theme === 'light' ||
+    (typeof document !== 'undefined' &&
+      document.documentElement.classList.contains('light'));
 
   const containerRef = useRef<HTMLDivElement>(null);
   const activeLineRef = useRef<HTMLDivElement>(null);
@@ -151,11 +159,11 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
 
   return (
     <div className="relative w-full h-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col group shadow-lg">
-      {/* Top Header Badge & Controls (Floating overlay matching SlidePanel) */}
-      <div className="absolute top-3 left-4 right-4 z-20 flex items-center justify-between gap-2 pointer-events-auto opacity-0 group-hover:opacity-100 transition-all duration-300 flex-wrap">
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Title Badge (rounded-full) */}
-          <div className="flex items-center gap-2 bg-slate-950/85 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700/60 shadow-md">
+      {/* Top Header Badge & Controls (Floating in top-right on hover) */}
+      <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5 pointer-events-auto opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Title Badge (Hidden in docked mode) */}
+          <div className="flex items-center gap-2 bg-slate-950/85 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700/60 shadow-md legacy-title-badge">
             <span title="拖曳以調換位置" className="cursor-grab active:cursor-grabbing flex items-center">
               <GripVertical className="w-3.5 h-3.5 text-slate-500 hover:text-slate-300" />
             </span>
@@ -169,7 +177,7 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
           </div>
 
           {/* Action Controls & Search Pill */}
-          <div className="flex items-center gap-1.5 bg-slate-950/85 backdrop-blur-md p-1 rounded-xl border border-slate-700/60 shadow-md">
+          <div className="flex items-center gap-1.5 bg-slate-950/90 backdrop-blur-md p-1 rounded-xl border border-slate-700/60 shadow-lg">
             {/* Dynamic Sizing Search Input */}
             <div className="relative w-28 sm:w-36 focus-within:w-48 sm:focus-within:w-56 transition-all duration-200">
               <Search className="w-3 h-3 text-slate-400 absolute left-2 top-2" />
@@ -250,7 +258,7 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
         </div>
 
         {/* Window controls (Maximize & Close) */}
-        <div className="flex items-center gap-1 bg-slate-950/85 backdrop-blur-md p-1 rounded-xl border border-slate-700/60 shadow-md">
+        <div className="flex items-center gap-1 bg-slate-950/85 backdrop-blur-md p-1 rounded-xl border border-slate-700/60 shadow-md legacy-window-ctrl">
           <button
             onClick={onToggleMaximize}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
@@ -273,7 +281,7 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
       {/* Subtitles Scroll List (Takes 100% full height underneath overlay) */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-4 pt-14 space-y-2.5 custom-scrollbar bg-slate-900/60 h-full w-full"
+        className="flex-1 overflow-y-auto p-3 pt-2.5 space-y-2.5 custom-scrollbar bg-slate-900/60 h-full w-full"
       >
         {subtitles.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4 text-center space-y-3">
@@ -321,7 +329,11 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
                 ref={isCurrent ? activeLineRef : null}
                 className={`group/item rounded-xl transition-all duration-150 border ${
                   isCurrent
-                    ? 'bg-blue-600/15 border-blue-500/40 shadow-md ring-1 ring-blue-500/20'
+                    ? isLight
+                      ? 'bg-blue-50/90 border-blue-400/80 shadow-md ring-1 ring-blue-400/40'
+                      : 'bg-blue-600/15 border-blue-500/40 shadow-md ring-1 ring-blue-500/20'
+                    : isLight
+                    ? 'bg-white hover:bg-blue-50/40 border-slate-200/90 hover:border-blue-300/80 shadow-sm'
                     : 'bg-slate-850/50 hover:bg-slate-800/80 border-slate-800/60'
                 } p-3 flex flex-col gap-1.5`}
               >
@@ -334,7 +346,9 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
                       onClick={() => onSeek(sub.startTime)}
                       className={`font-mono px-2 py-0.5 rounded-md text-[11px] font-semibold transition-colors ${
                         isCurrent
-                          ? 'bg-blue-500 text-white shadow-sm'
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : isLight
+                          ? 'bg-slate-100 text-blue-600 hover:bg-blue-100 hover:text-blue-800 border border-slate-200'
                           : 'bg-slate-800 text-blue-400 hover:bg-blue-900/50 hover:text-blue-200'
                       }`}
                       title="跳轉至此時間"
@@ -354,7 +368,7 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
                         />
                       </div>
                     ) : (
-                      <span className={`font-semibold tracking-wide ${sub.color || 'text-slate-300'}`}>
+                      <span className={`font-semibold tracking-wide ${sub.color || (isLight ? 'text-slate-700' : 'text-slate-300')}`}>
                         {sub.speaker || '發言者'}
                       </span>
                     )}
@@ -406,7 +420,9 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
                       onClick={() => setEditingLineId(editingLineId === sub.id ? null : sub.id)}
                       className={`p-1 rounded-md text-xs transition-colors flex items-center gap-1 ${
                         isLineEditing
-                          ? 'bg-amber-500/25 text-amber-300'
+                          ? 'bg-amber-500/25 text-amber-500 font-semibold'
+                          : isLight
+                          ? 'opacity-0 group-hover/item:opacity-100 text-slate-500 hover:text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-200'
                           : 'opacity-0 group-hover/item:opacity-100 text-slate-400 hover:text-white hover:bg-slate-800'
                       }`}
                       title={isLineEditing ? '完成校對' : '校對此句'}
@@ -429,7 +445,11 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
                     onClick={() => onSeek(sub.startTime)}
                     className={`text-xs md:text-sm leading-relaxed cursor-pointer transition-colors ${
                       isCurrent
-                        ? 'text-white font-medium drop-shadow-sm'
+                        ? isLight
+                          ? 'text-blue-950 font-semibold'
+                          : 'text-white font-medium drop-shadow-sm'
+                        : isLight
+                        ? 'text-slate-700 group-hover/item:text-blue-600'
                         : 'text-slate-300 hover:text-white'
                     }`}
                   >

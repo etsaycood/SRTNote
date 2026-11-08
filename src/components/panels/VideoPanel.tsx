@@ -498,9 +498,9 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
 
   return (
     <div className="relative w-full h-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col group shadow-lg">
-      {/* Top Header Badge & Controls (Grouped together next to title) */}
+      {/* Top Header Badge & Controls (Floating in top-right on hover) */}
       <div
-        className={`absolute top-3 left-4 z-40 flex items-center gap-2 pointer-events-auto transition-all duration-300 flex-wrap ${
+        className={`absolute top-2 right-2 z-40 flex items-center gap-1.5 pointer-events-auto transition-opacity duration-200 flex-wrap ${
           mediaType === 'video' && mediaUrl
             ? showControls
               ? 'opacity-100'
@@ -508,7 +508,7 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
             : 'opacity-0 group-hover:opacity-100'
         }`}
       >
-        <div className="flex items-center gap-2 bg-slate-950/85 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700/60 shadow-md">
+        <div className="flex items-center gap-2 bg-slate-950/85 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700/60 shadow-md legacy-title-badge">
           <span title="拖曳以調換位置" className="cursor-grab active:cursor-grabbing flex items-center">
             <GripVertical className="w-3.5 h-3.5 text-slate-500 hover:text-slate-300" />
           </span>
@@ -585,7 +585,7 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
 
           <button
             onClick={onToggleMaximize}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors legacy-window-ctrl"
             title={isMaximized ? '還原視窗' : '最大化視窗'}
           >
             {isMaximized ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
@@ -593,7 +593,7 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
           {onClose && (
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 transition-colors"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 transition-colors legacy-window-ctrl"
               title="關閉此面板（可由右上角加回）"
             >
               <X className="w-3.5 h-3.5" />

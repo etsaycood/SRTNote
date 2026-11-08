@@ -22,9 +22,13 @@ import {
   Settings,
   Smartphone,
   Share2,
-  Network
+  Network,
+  Sun,
+  Moon,
+  Languages
 } from 'lucide-react';
 import { YoutubeIcon } from './icons/YoutubeIcon';
+import { Theme, Language, t } from '../utils/i18n';
 
 interface NavbarProps {
   projectTitle: string;
@@ -52,6 +56,13 @@ interface NavbarProps {
   onOpenShareModal?: () => void;
   isMobileMode?: boolean;
   onToggleMobileMode?: () => void;
+  onSelectPreset?: (preset: any) => void;
+  showPlayerBar?: boolean;
+  onTogglePlayerBar?: () => void;
+  theme?: Theme;
+  onToggleTheme?: () => void;
+  lang?: Language;
+  onToggleLanguage?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -79,12 +90,21 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenPasteModal,
   onOpenShareModal,
   isMobileMode = false,
-  onToggleMobileMode
+  onToggleMobileMode,
+  onSelectPreset,
+  showPlayerBar = true,
+  onTogglePlayerBar,
+  theme = 'dark',
+  onToggleTheme,
+  lang = 'zh',
+  onToggleLanguage
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState(projectTitle);
   const [showUploadDropdown, setShowUploadDropdown] = useState(false);
   const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
+  const [showLayoutDropdown, setShowLayoutDropdown] = useState(false);
+  const isLight = theme === 'light';
 
   const handleTitleSubmit = () => {
     setIsEditingTitle(false);
@@ -96,11 +116,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   const panelNames: Record<PanelId, string> = {
-    video: '影音視窗',
-    slides: '同步簡報',
-    transcript: '即時逐字稿',
-    summary: '重點整理',
-    mindmap: '互動心智圖'
+    video: t('panel_video', lang),
+    slides: t('panel_slides', lang),
+    transcript: t('panel_transcript', lang),
+    summary: t('panel_summary', lang),
+    mindmap: t('panel_mindmap', lang)
   };
 
   return (
@@ -271,7 +291,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         {onOpenShareModal && (
           <button
             onClick={onOpenShareModal}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-400 hover:text-blue-300 border border-slate-700 transition-all shadow-md active:scale-95 flex items-center justify-center"
+            className={`p-2 rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center ${
+              isLight
+                ? 'bg-slate-100 hover:bg-slate-200 text-blue-600 hover:text-blue-700 border border-slate-200'
+                : 'bg-slate-800 hover:bg-slate-700 text-blue-400 hover:text-blue-300 border border-slate-700'
+            }`}
             title="產生雲端分享連結 (?s=p_代號 / d_代號 / j_代號)"
           >
             <Share2 className="w-4 h-4" />
@@ -283,7 +307,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           onClick={() => onTogglePanel('mindmap')}
           className={`p-2 rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center ${
             openPanels.includes('mindmap')
-              ? 'bg-cyan-600/30 text-cyan-300 border border-cyan-500/50 shadow-sm ring-1 ring-cyan-500/30'
+              ? isLight
+                ? 'bg-cyan-600 hover:bg-cyan-500 text-white force-white shadow-md shadow-cyan-600/30 border border-cyan-500 ring-1 ring-cyan-400'
+                : 'bg-cyan-600/30 text-cyan-300 border border-cyan-500/50 shadow-sm ring-1 ring-cyan-500/30'
+              : isLight
+              ? 'bg-slate-100 hover:bg-slate-200 text-cyan-700 hover:text-cyan-900 border border-slate-200'
               : 'bg-slate-800 hover:bg-slate-700 text-cyan-400 hover:text-cyan-300 border border-slate-700'
           }`}
           title={
@@ -302,6 +330,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             className={`p-2 rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center ${
               isMobileMode
                 ? 'bg-blue-600/30 text-blue-400 border border-blue-500/50 shadow-sm ring-1 ring-blue-500/30'
+                : isLight
+                ? 'bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200'
                 : 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700'
             }`}
             title={
@@ -314,14 +344,176 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         )}
 
+        {/* 播放控制列顯示/隱藏切換按鈕 */}
+        {onTogglePlayerBar && (
+          <button
+            onClick={onTogglePlayerBar}
+            className={`p-2 rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center ${
+              showPlayerBar
+                ? isLight
+                  ? 'bg-slate-100 hover:bg-slate-200 text-blue-600 hover:text-blue-700 border border-slate-200'
+                  : 'bg-slate-800 hover:bg-slate-700 text-blue-400 hover:text-blue-300 border border-slate-700'
+                : isLight
+                ? 'bg-slate-50 text-slate-400 hover:text-slate-600 border border-slate-200'
+                : 'bg-slate-900 text-slate-500 hover:text-slate-300 border border-slate-800'
+            }`}
+            title={showPlayerBar ? '隱藏底端播放列 (釋放更多視窗空間)' : '展開底端播放列'}
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* 版面格式選單按鈕 (Dropdown) */}
+        {!isMobileMode && onSelectPreset && (
+          <div className="relative">
+            <button
+              onClick={() => {
+                setShowLayoutDropdown(!showLayoutDropdown);
+                setShowSettingsDropdown(false);
+                setShowUploadDropdown(false);
+              }}
+              className={`px-2.5 py-1.5 rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-1.5 text-xs font-medium ${
+                showLayoutDropdown
+                  ? 'bg-blue-600 text-white force-white shadow-blue-600/30 ring-1 ring-blue-400'
+                  : isLight
+                  ? 'bg-slate-100 hover:bg-slate-200 text-blue-600 hover:text-blue-700 border border-slate-200'
+                  : 'bg-slate-800 hover:bg-slate-700 text-blue-400 hover:text-blue-300 border border-slate-700'
+              }`}
+              title="切換工作區版面格式（研討學習、經典四宮格、心智圖專注、筆記專注）"
+            >
+              <LayoutGrid className={`w-4 h-4 ${showLayoutDropdown ? 'text-white force-white' : isLight ? 'text-blue-600' : 'text-blue-400'}`} />
+              <span className="hidden sm:inline">版面格式</span>
+              <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${showLayoutDropdown ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showLayoutDropdown && (
+              <div
+                className="absolute right-0 top-full mt-2 w-48 bg-slate-900/98 backdrop-blur-xl border border-slate-700/80 rounded-2xl shadow-2xl p-1.5 z-50 text-xs animate-scale-in"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="px-2.5 py-1 text-[11px] font-bold text-slate-400 border-b border-slate-800/80 mb-1">
+                  版面格式
+                </div>
+
+                <div className="space-y-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelectPreset('study');
+                      setShowLayoutDropdown(false);
+                    }}
+                    className="w-full px-2.5 py-1.5 rounded-xl hover:bg-slate-800 text-left transition-colors flex items-center gap-2 group"
+                  >
+                    <span>🧠</span>
+                    <span className="font-semibold text-white group-hover:text-blue-400 transition-colors">
+                      研討學習模式
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelectPreset('2x2');
+                      setShowLayoutDropdown(false);
+                    }}
+                    className="w-full px-2.5 py-1.5 rounded-xl hover:bg-slate-800 text-left transition-colors flex items-center gap-2 group"
+                  >
+                    <span>📊</span>
+                    <span className="font-semibold text-white group-hover:text-blue-400 transition-colors">
+                      經典四宮格
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelectPreset('mindmap-focus');
+                      setShowLayoutDropdown(false);
+                    }}
+                    className="w-full px-2.5 py-1.5 rounded-xl hover:bg-slate-800 text-left transition-colors flex items-center gap-2 group"
+                  >
+                    <span>🗺️</span>
+                    <span className="font-semibold text-white group-hover:text-blue-400 transition-colors">
+                      心智圖專注
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelectPreset('notes-focus');
+                      setShowLayoutDropdown(false);
+                    }}
+                    className="w-full px-2.5 py-1.5 rounded-xl hover:bg-slate-800 text-left transition-colors flex items-center gap-2 group"
+                  >
+                    <span>📝</span>
+                    <span className="font-semibold text-white group-hover:text-blue-400 transition-colors">
+                      筆記專注
+                    </span>
+                  </button>
+                </div>
+
+                <div className="pt-1 mt-1 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onResetLayout();
+                      setShowLayoutDropdown(false);
+                    }}
+                    className="w-full py-1.5 px-2 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white text-xs transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>{t('resetLayout', lang)}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 亮暗版面主題切換按鈕 */}
+        {onToggleTheme && (
+          <button
+            onClick={onToggleTheme}
+            className={`p-2 rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center ${
+              isLight
+                ? 'bg-slate-100 hover:bg-slate-200 text-blue-600 hover:text-blue-700 border border-slate-200'
+                : 'bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 border border-slate-700'
+            }`}
+            title={theme === 'dark' ? (lang === 'zh' ? '切換為亮色版面 (Light Mode)' : 'Switch to Light Mode') : (lang === 'zh' ? '切換為暗色版面 (Dark Mode)' : 'Switch to Dark Mode')}
+          >
+            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4 text-blue-600" />}
+          </button>
+        )}
+
+        {/* 中英語言切換按鈕 */}
+        {onToggleLanguage && (
+          <button
+            onClick={onToggleLanguage}
+            className={`px-2.5 py-1.5 rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-1.5 text-xs font-semibold ${
+              isLight
+                ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700'
+            }`}
+            title={lang === 'zh' ? 'Switch to English' : '切換為繁體中文'}
+          >
+            <Languages className={`w-3.5 h-3.5 ${isLight ? 'text-blue-600' : 'text-blue-400'}`} />
+            <span>{lang === 'zh' ? 'EN' : '繁中'}</span>
+          </button>
+        )}
+
         {/* 統一設定入口 (Icon only) */}
         <div className="relative">
           <button
             onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shadow-sm transition-all flex items-center justify-center"
+            className={`p-2 rounded-xl border shadow-sm transition-all flex items-center justify-center ${
+              isLight
+                ? 'bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+            }`}
             title="系統設定（AI 連線、版面視窗、示範專案）"
           >
-            <Settings className="w-4 h-4 text-slate-300" />
+            <Settings className={`w-4 h-4 ${isLight ? 'text-slate-600' : 'text-slate-300'}`} />
           </button>
 
           {showSettingsDropdown && (
@@ -332,7 +524,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                 <div className="flex items-center gap-1.5">
                   <Settings className="w-4 h-4 text-blue-400" />
-                  <span className="font-bold text-white text-xs">系統設定</span>
+                  <span className="font-bold text-white text-xs">{t('settings', lang)}</span>
                 </div>
                 <button
                   onClick={() => setShowSettingsDropdown(false)}
@@ -356,8 +548,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <Cpu className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="font-semibold text-white text-xs">AI 連線設定</div>
-                      <div className="text-[10px] text-slate-400">自訂 API 端點、模型與提示詞</div>
+                      <div className="font-semibold text-white text-xs">{t('aiSettings', lang)}</div>
+                      <div className="text-[10px] text-slate-400">{t('aiSettingsDesc', lang)}</div>
                     </div>
                   </div>
                   <ChevronDown className="w-3.5 h-3.5 -rotate-90 text-purple-400" />
@@ -369,23 +561,24 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-semibold text-slate-300 flex items-center gap-1.5 text-xs">
                     <LayoutGrid className="w-3.5 h-3.5 text-blue-400" />
-                    版面視窗開關
+                    {t('panelToggles', lang)}
                   </span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400">
-                    {openPanels.length}/5 開啟
+                    {openPanels.length}/5 {t('panelOpen', lang)}
                   </span>
                 </div>
 
                 <div className="space-y-1.5">
                   {[
-                    { id: 'video' as PanelId, title: '影音視窗', icon: Video, color: 'text-blue-400' },
-                    { id: 'slides' as PanelId, title: '同步簡報', icon: Presentation, color: 'text-emerald-400' },
-                    { id: 'transcript' as PanelId, title: '即時逐字稿', icon: FileText, color: 'text-amber-400' },
-                    { id: 'summary' as PanelId, title: '重點整理', icon: Sparkles, color: 'text-purple-400' },
-                    { id: 'mindmap' as PanelId, title: '互動心智圖', icon: Network, color: 'text-cyan-400' }
+                    { id: 'video' as PanelId, icon: Video, color: 'text-blue-400' },
+                    { id: 'slides' as PanelId, icon: Presentation, color: 'text-emerald-400' },
+                    { id: 'transcript' as PanelId, icon: FileText, color: 'text-amber-400' },
+                    { id: 'summary' as PanelId, icon: Sparkles, color: 'text-purple-400' },
+                    { id: 'mindmap' as PanelId, icon: Network, color: 'text-cyan-400' }
                   ].map((p) => {
                     const isOpen = openPanels.includes(p.id);
                     const Icon = p.icon;
+                    const pTitle = panelNames[p.id];
                     return (
                       <div
                         key={p.id}
@@ -398,7 +591,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <div className="flex items-center gap-2">
                           <Icon className={`w-3.5 h-3.5 ${isOpen ? p.color : 'text-slate-600'}`} />
                           <span className={`font-medium text-xs ${isOpen ? 'text-white' : 'text-slate-400'}`}>
-                            {p.title}
+                            {pTitle}
                           </span>
                         </div>
 
@@ -406,98 +599,25 @@ export const Navbar: React.FC<NavbarProps> = ({
                           <button
                             onClick={() => onTogglePanel(p.id)}
                             className="px-2 py-0.5 rounded-lg text-[11px] text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 transition-colors flex items-center gap-1"
-                            title="關閉此面板"
+                            title={t('panelClose', lang)}
                           >
                             <X className="w-3 h-3" />
-                            <span>關閉</span>
+                            <span>{t('panelClose', lang)}</span>
                           </button>
                         ) : (
                           <button
                             onClick={() => onTogglePanel(p.id)}
                             className="px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30 transition-all flex items-center gap-1 active:scale-95"
-                            title="將此面板加回畫面"
+                            title={t('panelAdd', lang)}
                           >
                             <Plus className="w-3 h-3" />
-                            <span>加回</span>
+                            <span>{t('panelAdd', lang)}</span>
                           </button>
                         )}
                       </div>
                     );
                   })}
                 </div>
-
-                <div className="pt-2 flex flex-col gap-1.5">
-                  {openPanels.length < 4 && (
-                    <button
-                      onClick={() => {
-                        onOpenAllPanels();
-                      }}
-                      className="w-full py-1.5 px-2.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>一鍵開啟全部 4 個面板</span>
-                    </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      onResetLayout();
-                      setShowSettingsDropdown(false);
-                    }}
-                    className="w-full py-1.5 px-2.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white text-xs transition-colors flex items-center justify-center gap-1.5"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>重設為預設四宮格排序與比例</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* 3. 手機模式切換 */}
-              {onToggleMobileMode && (
-                <div className="py-2 border-b border-slate-800">
-                  <button
-                    onClick={() => {
-                      onToggleMobileMode();
-                      setShowSettingsDropdown(false);
-                    }}
-                    className={`w-full py-2 px-2.5 rounded-xl text-xs transition-colors flex items-center justify-between ${
-                      isMobileMode
-                        ? 'bg-blue-600/20 text-blue-300 border border-blue-500/30'
-                        : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    <span className="flex items-center gap-2">
-                      <Smartphone className="w-3.5 h-3.5 text-blue-400" />
-                      <span>手機/平板模式</span>
-                    </span>
-                    <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                        isMobileMode
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-slate-700 text-slate-400'
-                      }`}
-                    >
-                      {isMobileMode ? '已開啟' : '電腦模式'}
-                    </span>
-                  </button>
-                </div>
-              )}
-
-              {/* 4. 示範專案 */}
-              <div className="pt-2">
-                <button
-                  onClick={() => {
-                    onLoadDemoProject();
-                    setShowSettingsDropdown(false);
-                  }}
-                  className="w-full py-2 px-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white text-xs transition-colors flex items-center justify-between"
-                  title="載入示範專案"
-                >
-                  <span className="flex items-center gap-2">
-                    <RotateCcw className="w-3.5 h-3.5 text-blue-400" />
-                    <span>載入示範專案</span>
-                  </span>
-                  <span className="text-[10px] text-slate-500">重置至預設範例</span>
-                </button>
               </div>
             </div>
           )}

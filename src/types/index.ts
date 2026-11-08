@@ -33,6 +33,24 @@ export interface LMStudioConfig {
 
 export type PanelId = 'video' | 'slides' | 'transcript' | 'summary' | 'mindmap';
 
+export type DockSlotId = 'topLeft' | 'bottomLeft' | 'topRight' | 'bottomRight';
+
+export interface DockSlotConfig {
+  tabs: PanelId[];
+  activeTab: PanelId;
+}
+
+export type DockLayoutPreset = 'study' | '2x2' | 'mindmap-focus' | 'notes-focus';
+
+export interface DockLayoutConfig {
+  slots: Record<DockSlotId, DockSlotConfig>;
+  splitRatios: {
+    colSplit: number;      // left vs right width % (20 to 80)
+    leftRowSplit: number;  // topLeft vs bottomLeft height % (20 to 80)
+    rightRowSplit: number; // topRight vs bottomRight height % (20 to 80)
+  };
+}
+
 export type LayoutPreset = '2x2' | 'split-vertical' | 'slides-focus' | 'transcript-focus';
 
 export interface PanelConfig {

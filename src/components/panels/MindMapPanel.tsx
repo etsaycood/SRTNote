@@ -31,6 +31,7 @@ interface MindMapPanelProps {
   isMaximized: boolean;
   onToggleMaximize: () => void;
   onClose?: () => void;
+  theme?: 'dark' | 'light';
 }
 
 interface PositionedNode {
@@ -57,6 +58,15 @@ interface BranchPalette {
   badgeText: string;
   badgeBorder: string;
   glow: string;
+  // Light Mode variants
+  lightLevel1Bg: string;
+  lightLevel1Border: string;
+  lightLevel1Text: string;
+  lightCardBg: string;
+  lightCardBorder: string;
+  lightBadgeBg: string;
+  lightBadgeText: string;
+  lightBadgeBorder: string;
 }
 
 const BRANCH_PALETTES: BranchPalette[] = [
@@ -70,7 +80,15 @@ const BRANCH_PALETTES: BranchPalette[] = [
     badgeBg: 'bg-indigo-500/20 hover:bg-indigo-500/35',
     badgeText: 'text-indigo-200',
     badgeBorder: 'border-indigo-500/50',
-    glow: 'ring-indigo-500/50 shadow-indigo-500/20'
+    glow: 'ring-indigo-500/50 shadow-indigo-500/20',
+    lightLevel1Bg: 'bg-indigo-50/95',
+    lightLevel1Border: 'border-indigo-400',
+    lightLevel1Text: 'text-indigo-950',
+    lightCardBg: 'bg-white',
+    lightCardBorder: 'border-indigo-200 hover:border-indigo-400',
+    lightBadgeBg: 'bg-indigo-100 hover:bg-indigo-200',
+    lightBadgeText: 'text-indigo-700',
+    lightBadgeBorder: 'border-indigo-300'
   },
   {
     name: 'emerald',
@@ -82,7 +100,15 @@ const BRANCH_PALETTES: BranchPalette[] = [
     badgeBg: 'bg-emerald-500/20 hover:bg-emerald-500/35',
     badgeText: 'text-emerald-200',
     badgeBorder: 'border-emerald-500/50',
-    glow: 'ring-emerald-500/50 shadow-emerald-500/20'
+    glow: 'ring-emerald-500/50 shadow-emerald-500/20',
+    lightLevel1Bg: 'bg-emerald-50/95',
+    lightLevel1Border: 'border-emerald-400',
+    lightLevel1Text: 'text-emerald-950',
+    lightCardBg: 'bg-white',
+    lightCardBorder: 'border-emerald-200 hover:border-emerald-400',
+    lightBadgeBg: 'bg-emerald-100 hover:bg-emerald-200',
+    lightBadgeText: 'text-emerald-700',
+    lightBadgeBorder: 'border-emerald-300'
   },
   {
     name: 'amber',
@@ -94,7 +120,15 @@ const BRANCH_PALETTES: BranchPalette[] = [
     badgeBg: 'bg-amber-500/20 hover:bg-amber-500/35',
     badgeText: 'text-amber-200',
     badgeBorder: 'border-amber-500/50',
-    glow: 'ring-amber-500/50 shadow-amber-500/20'
+    glow: 'ring-amber-500/50 shadow-amber-500/20',
+    lightLevel1Bg: 'bg-amber-50/95',
+    lightLevel1Border: 'border-amber-400',
+    lightLevel1Text: 'text-amber-950',
+    lightCardBg: 'bg-white',
+    lightCardBorder: 'border-amber-200 hover:border-amber-400',
+    lightBadgeBg: 'bg-amber-100 hover:bg-amber-200',
+    lightBadgeText: 'text-amber-800',
+    lightBadgeBorder: 'border-amber-300'
   },
   {
     name: 'purple',
@@ -106,7 +140,15 @@ const BRANCH_PALETTES: BranchPalette[] = [
     badgeBg: 'bg-purple-500/20 hover:bg-purple-500/35',
     badgeText: 'text-purple-200',
     badgeBorder: 'border-purple-500/50',
-    glow: 'ring-purple-500/50 shadow-purple-500/20'
+    glow: 'ring-purple-500/50 shadow-purple-500/20',
+    lightLevel1Bg: 'bg-purple-50/95',
+    lightLevel1Border: 'border-purple-400',
+    lightLevel1Text: 'text-purple-950',
+    lightCardBg: 'bg-white',
+    lightCardBorder: 'border-purple-200 hover:border-purple-400',
+    lightBadgeBg: 'bg-purple-100 hover:bg-purple-200',
+    lightBadgeText: 'text-purple-700',
+    lightBadgeBorder: 'border-purple-300'
   },
   {
     name: 'rose',
@@ -118,7 +160,15 @@ const BRANCH_PALETTES: BranchPalette[] = [
     badgeBg: 'bg-rose-500/20 hover:bg-rose-500/35',
     badgeText: 'text-rose-200',
     badgeBorder: 'border-rose-500/50',
-    glow: 'ring-rose-500/50 shadow-rose-500/20'
+    glow: 'ring-rose-500/50 shadow-rose-500/20',
+    lightLevel1Bg: 'bg-rose-50/95',
+    lightLevel1Border: 'border-rose-400',
+    lightLevel1Text: 'text-rose-950',
+    lightCardBg: 'bg-white',
+    lightCardBorder: 'border-rose-200 hover:border-rose-400',
+    lightBadgeBg: 'bg-rose-100 hover:bg-rose-200',
+    lightBadgeText: 'text-rose-700',
+    lightBadgeBorder: 'border-rose-300'
   },
   {
     name: 'cyan',
@@ -130,7 +180,15 @@ const BRANCH_PALETTES: BranchPalette[] = [
     badgeBg: 'bg-cyan-500/20 hover:bg-cyan-500/35',
     badgeText: 'text-cyan-200',
     badgeBorder: 'border-cyan-500/50',
-    glow: 'ring-cyan-500/50 shadow-cyan-500/20'
+    glow: 'ring-cyan-500/50 shadow-cyan-500/20',
+    lightLevel1Bg: 'bg-cyan-50/95',
+    lightLevel1Border: 'border-cyan-400',
+    lightLevel1Text: 'text-cyan-950',
+    lightCardBg: 'bg-white',
+    lightCardBorder: 'border-cyan-200 hover:border-cyan-400',
+    lightBadgeBg: 'bg-cyan-100 hover:bg-cyan-200',
+    lightBadgeText: 'text-cyan-800',
+    lightBadgeBorder: 'border-cyan-300'
   }
 ];
 
@@ -196,10 +254,17 @@ export const MindMapPanel: React.FC<MindMapPanelProps> = ({
   onUpdateMindMap,
   isMaximized,
   onToggleMaximize,
-  onClose
+  onClose,
+  theme
 }) => {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState<boolean>(false);
+
+  // Check if active theme is light
+  const isLight =
+    theme === 'light' ||
+    (typeof document !== 'undefined' &&
+      document.documentElement.classList.contains('light'));
 
   // Parse Markdown or Mermaid mindmap into hierarchical tree
   const rootNode = useMemo(() => {
@@ -801,11 +866,11 @@ export const MindMapPanel: React.FC<MindMapPanelProps> = ({
 
   return (
     <div className="relative w-full h-full bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden flex flex-col group shadow-lg select-none">
-      {/* Top Floating Header Bar */}
-      <div className="absolute top-3 left-4 right-4 z-30 flex items-center justify-between gap-2 pointer-events-auto flex-wrap">
-        <div className="flex items-center gap-2 flex-wrap">
+      {/* Top Floating Header Bar (Floating in top-right on hover) */}
+      <div className="absolute top-2 right-2 z-30 flex items-center gap-1.5 pointer-events-auto opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
           {/* Panel Title Badge */}
-          <div className="flex items-center gap-2 bg-slate-900/90 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700/70 shadow-md">
+          <div className="flex items-center gap-2 bg-slate-900/90 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700/70 shadow-md legacy-title-badge">
             <span title="拖曳以調換面板位置" className="cursor-grab active:cursor-grabbing flex items-center">
               <GripVertical className="w-3.5 h-3.5 text-slate-500 hover:text-slate-300" />
             </span>
@@ -932,7 +997,7 @@ export const MindMapPanel: React.FC<MindMapPanelProps> = ({
         </div>
 
         {/* Right: Maximize & Close */}
-        <div className="flex items-center gap-1.5 bg-slate-900/90 backdrop-blur-md p-1 rounded-xl border border-slate-700/70 shadow-md">
+        <div className="flex items-center gap-1.5 bg-slate-900/90 backdrop-blur-md p-1 rounded-xl border border-slate-700/70 shadow-md legacy-window-ctrl">
           <button
             type="button"
             onClick={onToggleMaximize}
@@ -1047,8 +1112,9 @@ export const MindMapPanel: React.FC<MindMapPanelProps> = ({
           isDragging ? 'cursor-grabbing' : 'cursor-grab'
         }`}
         style={{
-          backgroundImage:
-            'radial-gradient(circle at 1px 1px, rgba(148, 163, 184, 0.12) 1px, transparent 0)',
+          backgroundImage: isLight
+            ? 'radial-gradient(circle at 1px 1px, rgba(100, 116, 139, 0.22) 1px, transparent 0)'
+            : 'radial-gradient(circle at 1px 1px, rgba(148, 163, 184, 0.12) 1px, transparent 0)',
           backgroundSize: '24px 24px'
         }}
       >
@@ -1093,7 +1159,7 @@ export const MindMapPanel: React.FC<MindMapPanelProps> = ({
                   fill="none"
                   stroke={palette.stroke}
                   strokeWidth={item.node.depth === 1 ? 2.6 : 1.9}
-                  strokeOpacity={0.72}
+                  strokeOpacity={isLight ? 0.85 : 0.72}
                   strokeLinecap="round"
                 />
               );
@@ -1104,6 +1170,7 @@ export const MindMapPanel: React.FC<MindMapPanelProps> = ({
           {layout.nodes.map((item) => {
             const { node, x, y, width, isExpanded } = item;
             const isRoot = node.depth === 0;
+            const isLevel1 = node.depth === 1;
             const hasChildren = node.children.length > 0;
             const palette =
               BRANCH_PALETTES[node.branchIndex % BRANCH_PALETTES.length];
@@ -1111,6 +1178,48 @@ export const MindMapPanel: React.FC<MindMapPanelProps> = ({
             const isSearchMatch =
               searchQuery.trim().length > 0 &&
               node.label.toLowerCase().includes(searchQuery.trim().toLowerCase());
+
+            // Determine card container style based on depth and theme
+            let cardStyleClass = '';
+            if (isRoot) {
+              cardStyleClass = isLight
+                ? 'bg-gradient-to-br from-indigo-600 via-indigo-600 to-blue-600 border border-indigo-400 shadow-lg shadow-indigo-500/25 px-4 py-3 text-white'
+                : 'bg-gradient-to-br from-slate-900 via-indigo-950/90 to-slate-900 border-indigo-400/70 shadow-indigo-500/20 px-4 py-3 text-white';
+            } else if (isLevel1) {
+              cardStyleClass = isLight
+                ? `${palette.lightLevel1Bg} ${palette.lightLevel1Border} border px-3.5 py-2.5 shadow-sm`
+                : `${palette.cardBg} ${palette.cardBorder} ${palette.cardHoverBorder} px-3.5 py-2.5`;
+            } else {
+              cardStyleClass = isLight
+                ? `${palette.lightCardBg} ${palette.lightCardBorder} border px-3.5 py-2.5 shadow-sm`
+                : `${palette.cardBg} ${palette.cardBorder} ${palette.cardHoverBorder} px-3.5 py-2.5`;
+            }
+
+            // Determine label text style based on depth and theme
+            let labelTextClass = '';
+            if (isRoot) {
+              labelTextClass = 'text-sm font-extrabold text-white force-white tracking-wide';
+            } else if (isLevel1) {
+              labelTextClass = isLight
+                ? `text-xs font-bold ${palette.lightLevel1Text}`
+                : 'text-xs font-bold text-slate-100';
+            } else {
+              labelTextClass = isLight
+                ? 'text-xs font-medium text-slate-800'
+                : 'text-xs font-medium text-slate-200';
+            }
+
+            // Determine expand badge style based on theme
+            let badgeStyleClass = '';
+            if (isExpanded) {
+              badgeStyleClass = isLight
+                ? 'w-6 h-6 bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                : 'w-6 h-6 bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-600';
+            } else {
+              badgeStyleClass = isLight
+                ? `px-2 h-6 text-[11px] font-bold ${palette.lightBadgeBg} ${palette.lightBadgeText} ${palette.lightBadgeBorder}`
+                : `px-2 h-6 text-[11px] font-bold ${palette.badgeBg} ${palette.badgeText} ${palette.badgeBorder}`;
+            }
 
             return (
               <div
@@ -1134,11 +1243,7 @@ export const MindMapPanel: React.FC<MindMapPanelProps> = ({
                   width: `${width}px`,
                   transform: 'translateY(-50%)'
                 }}
-                className={`absolute rounded-xl border transition-all duration-200 cursor-pointer group/node shadow-lg ${
-                  isRoot
-                    ? 'bg-gradient-to-br from-slate-900 via-indigo-950/90 to-slate-900 border-indigo-400/70 shadow-indigo-500/20 px-4 py-3'
-                    : `${palette.cardBg} ${palette.cardBorder} ${palette.cardHoverBorder} px-3.5 py-2.5`
-                } ${
+                className={`absolute rounded-xl border transition-all duration-200 cursor-pointer group/node shadow-lg ${cardStyleClass} ${
                   isSelected
                     ? `ring-2 ${palette.glow}`
                     : ''
@@ -1157,15 +1262,7 @@ export const MindMapPanel: React.FC<MindMapPanelProps> = ({
 
                 {/* Card Content */}
                 <div className="flex items-center justify-between gap-2">
-                  <div
-                    className={`leading-snug break-words flex-1 ${
-                      isRoot
-                        ? 'text-sm font-extrabold text-white tracking-wide'
-                        : node.depth === 1
-                        ? 'text-xs font-bold text-slate-100'
-                        : 'text-xs font-medium text-slate-200'
-                    }`}
-                  >
+                  <div className={`leading-snug break-words flex-1 ${labelTextClass}`}>
                     {renderLabelWithTimestamps(node)}
                   </div>
 
@@ -1176,7 +1273,11 @@ export const MindMapPanel: React.FC<MindMapPanelProps> = ({
                       e.stopPropagation();
                       handleFocusNode(node, true);
                     }}
-                    className="opacity-0 group-hover/node:opacity-100 p-1 rounded-lg bg-slate-800/90 hover:bg-cyan-600 text-slate-300 hover:text-white transition-all flex-shrink-0"
+                    className={`opacity-0 group-hover/node:opacity-100 p-1 rounded-lg ${
+                      isLight
+                        ? 'bg-slate-200/80 hover:bg-indigo-600 text-slate-600 hover:text-white'
+                        : 'bg-slate-800/90 hover:bg-cyan-600 text-slate-300 hover:text-white'
+                    } transition-all flex-shrink-0`}
                     title="聚焦放大此節點 (或雙擊節點)"
                   >
                     <Focus className="w-3 h-3" />
@@ -1188,11 +1289,7 @@ export const MindMapPanel: React.FC<MindMapPanelProps> = ({
                   <button
                     type="button"
                     onClick={(e) => handleToggleNodeExpand(e, node)}
-                    className={`absolute -right-3.5 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center rounded-full border shadow-md transition-all active:scale-90 ${
-                      isExpanded
-                        ? 'w-6 h-6 bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-600'
-                        : `px-2 h-6 text-[11px] font-bold ${palette.badgeBg} ${palette.badgeText} ${palette.badgeBorder}`
-                    }`}
+                    className={`absolute -right-3.5 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center rounded-full border shadow-md transition-all active:scale-90 ${badgeStyleClass}`}
                     title={
                       isExpanded
                         ? '點擊收合子分支'
@@ -1216,14 +1313,9 @@ export const MindMapPanel: React.FC<MindMapPanelProps> = ({
       </div>
 
       {/* Bottom Floating Hint & Zoom Controls */}
-      <div className="absolute bottom-3 left-4 right-4 z-30 flex items-center justify-between pointer-events-none">
-        {/* Left: Interactive Hint */}
-        <div className="hidden sm:flex items-center gap-2 bg-slate-900/85 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-800 text-[11px] text-slate-400 pointer-events-auto">
-          <span>💡 點擊右側數字收合/展開 ・ 雙擊節點聚焦放大 ・ 點擊 ⏱️ 跳轉時間軸</span>
-        </div>
-
+      <div className="absolute bottom-3 right-4 z-30 flex items-center justify-end pointer-events-none">
         {/* Right: Zoom & Fit Controls */}
-        <div className="flex items-center gap-1 bg-slate-900/90 backdrop-blur-md p-1 rounded-xl border border-slate-700/70 shadow-lg pointer-events-auto ml-auto">
+        <div className="flex items-center gap-1 bg-slate-900/90 backdrop-blur-md p-1 rounded-xl border border-slate-700/70 shadow-lg pointer-events-auto">
           <button
             type="button"
             onClick={() => handleZoomBy(0.84)}
