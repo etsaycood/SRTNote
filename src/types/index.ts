@@ -85,6 +85,8 @@ export interface ProjectConfig {
   aiSummary: string;
   mindMapContent?: string;
   aiKeyPoints: { time: number; label: string; description: string }[];
+  dockLayout?: DockLayoutConfig;
+  showPlayerBar?: boolean;
   updatedAt: string;
 }
 

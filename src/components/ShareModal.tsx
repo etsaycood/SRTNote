@@ -5,7 +5,8 @@ import {
   YouTubeHistoryItem,
   LoopMode,
   MediaType,
-  ProjectConfig
+  ProjectConfig,
+  DockLayoutConfig
 } from '../types';
 import {
   CloudProvider,
@@ -30,7 +31,8 @@ import {
   AlertCircle,
   Cloud,
   CheckCircle2,
-  EyeOff
+  EyeOff,
+  LayoutGrid
 } from 'lucide-react';
 import { YoutubeIcon } from './icons/YoutubeIcon';
 
@@ -48,6 +50,8 @@ interface ShareModalProps {
   loopMode: LoopMode;
   aiSummary: string;
   mindMapContent?: string;
+  dockLayout?: DockLayoutConfig;
+  showPlayerBar?: boolean;
 }
 
 export const ShareModal: React.FC<ShareModalProps> = ({
@@ -63,7 +67,9 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   playlistQueue,
   loopMode,
   aiSummary,
-  mindMapContent
+  mindMapContent,
+  dockLayout,
+  showPlayerBar
 }) => {
   const [shareMode, setShareMode] = useState<ShareMode>(initialMode);
   const [preferredProvider, setPreferredProvider] = useState<CloudProvider | 'auto'>('auto');
@@ -154,6 +160,8 @@ export const ShareModal: React.FC<ShareModalProps> = ({
         subtitles: firstSubs,
         subtitlesByMedia: Object.keys(mergedSubsByMedia).length > 0 ? mergedSubsByMedia : undefined,
         slides: [], // 內容不包含簡報
+        dockLayout,
+        showPlayerBar,
         youtubeHistory: list,
         playlistVideoIds:
           playlistQueue.length > 0 ? playlistQueue : list.map((item) => item.id),
@@ -177,6 +185,8 @@ export const ShareModal: React.FC<ShareModalProps> = ({
       subtitlesByMedia:
         activeYtId && subtitles.length > 0 ? { [activeYtId]: subtitles } : undefined,
       slides: [], // 內容不包含簡報
+      dockLayout,
+      showPlayerBar,
       loopMode,
       aiSummary,
       mindMapContent,
@@ -197,7 +207,9 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     loopMode,
     aiSummary,
     mindMapContent,
-    includeHistorySubtitles
+    includeHistorySubtitles,
+    dockLayout,
+    showPlayerBar
   ]);
 
   const estimatedBytes = useMemo(() => {
@@ -373,17 +385,25 @@ export const ShareModal: React.FC<ShareModalProps> = ({
             </label>
           )}
 
-          {/* Package Summary & Slide Exclusion Notice */}
-          <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-slate-300">
-              <EyeOff className="w-4 h-4 text-amber-400 flex-shrink-0" />
-              <span>
-                分享內容<strong className="text-amber-300 mx-1">不包含簡報</strong>，接收方開啟連結時將自動隱藏「同步簡報」面板
+          {/* Package Summary & Layout / Slide Exclusion Notice */}
+          <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1.5 text-xs">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-slate-300">
+                <LayoutGrid className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <span>
+                  已保留目前的<strong className="text-emerald-300 mx-1">工作區視窗排列與比例</strong>，接收方開啟時將以相同版面呈現
+                </span>
+              </div>
+              <span className="px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 font-mono text-[11px] whitespace-nowrap">
+                大小約 {formatByteSize(estimatedBytes)}
               </span>
             </div>
-            <span className="px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 font-mono text-[11px] whitespace-nowrap">
-              大小約 {formatByteSize(estimatedBytes)}
-            </span>
+            <div className="flex items-center gap-2 text-slate-400 pl-0.5">
+              <EyeOff className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+              <span>
+                分享內容<strong className="text-amber-300 mx-1">不包含簡報圖片</strong>，若目前版面含有簡報將自動優化收合該窗格
+              </span>
+            </div>
           </div>
 
           {/* Step 2: 雲端儲存伺服器選擇 */}

@@ -256,6 +256,23 @@ export default function App() {
         setSlides([]);
         setSlidesByMedia({});
 
+        // 若分享內容包含當時版面配置，套用並儲存該版面（若無簡報則自動自版面移除簡報窗格）
+        if (config.dockLayout) {
+          const layoutToApply = (!config.slides || config.slides.length === 0)
+            ? removePanelFromLayout(config.dockLayout, 'slides')
+            : config.dockLayout;
+          setDockLayout(layoutToApply);
+          saveDockLayoutToStorage(layoutToApply);
+        }
+
+        // 若分享內容包含播放列顯隱狀態，同步套用
+        if (typeof config.showPlayerBar === 'boolean') {
+          setShowPlayerBar(config.showPlayerBar);
+          try {
+            localStorage.setItem('srtnote_show_player_bar', String(config.showPlayerBar));
+          } catch {}
+        }
+
         if (config.title) setProjectTitle(config.title);
         if (config.youtubeHistory && config.youtubeHistory.length > 0) {
           mergeSharedYouTubeLibrary(config.youtubeHistory);
@@ -550,6 +567,16 @@ export default function App() {
         if (c.aiSummary) setAiSummary(c.aiSummary);
         if (c.mindMapContent) setMindMapContent(c.mindMapContent);
         if (c.mediaDuration) setDuration(c.mediaDuration);
+        if (c.dockLayout) {
+          setDockLayout(c.dockLayout);
+          saveDockLayoutToStorage(c.dockLayout);
+        }
+        if (typeof c.showPlayerBar === 'boolean') {
+          setShowPlayerBar(c.showPlayerBar);
+          try {
+            localStorage.setItem('srtnote_show_player_bar', String(c.showPlayerBar));
+          } catch {}
+        }
       }
 
       // If media file detected in folder
@@ -642,6 +669,8 @@ export default function App() {
       },
       playlistVideoIds: playlistQueue.length > 0 ? playlistQueue : undefined,
       loopMode,
+      dockLayout,
+      showPlayerBar,
       aiSummary,
       mindMapContent,
       aiKeyPoints: [],
@@ -1386,6 +1415,8 @@ export default function App() {
         subtitlesByMedia={subtitlesByMedia}
         playlistQueue={playlistQueue}
         loopMode={loopMode}
+        dockLayout={dockLayout}
+        showPlayerBar={showPlayerBar}
         aiSummary={aiSummary}
         mindMapContent={mindMapContent}
       />
