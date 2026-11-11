@@ -13,7 +13,7 @@
 ![License](https://img.shields.io/badge/License-MIT-green)
 [![Deploy to GitHub Pages](https://github.com/etsaycood/SRTNote/actions/workflows/deploy.yml/badge.svg)](https://github.com/etsaycood/SRTNote/actions/workflows/deploy.yml)
 
-**打破視訊、簡報、逐字稿與 AI 筆記邊界的新一代沉浸式學習工作台**  
+**集合視訊、簡報、逐字稿與 AI 筆記邊界的沉浸式學習工作台**  
 純前端本地運行・零資料上雲・原生中文斷詞優化・毫秒級多維時間同步・手機平板完美適配
 
 🔗 **線上展示網址**：[**https://etsaycood.github.io/SRTNote/**](https://etsaycood.github.io/SRTNote/)
