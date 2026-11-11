@@ -9,6 +9,51 @@
   }
 }
 
+/* ========================================================
+   Design tokens (single source of truth for theme colors)
+   New code should use the Tailwind aliases bound to these
+   variables (bg-app, bg-panel, border-line, text-ink …) instead of
+   adding more html.light overrides below.
+   ======================================================== */
+:root {
+  --c-app: 17 19 23;            /* slate-950 */
+  --c-panel: 25 27 33;        /* slate-900 */
+  --c-panel-raised: 42 46 54; /* slate-800 */
+  --c-line: 42 46 54;         /* slate-800 */
+  --c-line-strong: 61 66 77;  /* slate-700 */
+  --c-ink: 236 238 242;       /* slate-100 */
+  --c-ink-muted: 154 161 174; /* slate-400 */
+  --c-ink-subtle: 113 120 135;/* slate-500 */
+  --c-accent: 131 146 248;     /* blue-400 */
+  --c-accent-alt: 45 212 191; /* cyan-400 */
+  color-scheme: dark;
+}
+
+html.light {
+  --c-app: 246 247 249;       /* slate-50 */
+  --c-panel: 255 255 255;
+  --c-panel-raised: 236 238 242;
+  --c-line: 220 223 229;      /* slate-200 */
+  --c-line-strong: 194 199 208;
+  --c-ink: 25 27 33;          /* slate-900 */
+  --c-ink-muted: 85 91 105;   /* slate-600 */
+  --c-ink-subtle: 113 120 135;
+  --c-accent: 81 89 224;      /* blue-600 */
+  --c-accent-alt: 13 148 136;  /* cyan-600 */
+  color-scheme: light;
+}
+
+/* Visible keyboard focus everywhere */
+:focus-visible {
+  outline: 2px solid rgb(var(--c-accent));
+  outline-offset: 2px;
+}
+
+/* Search hit highlight */
+mark.search-hit {
+  color: inherit;
+}
+
 /* Custom Scrollbar for sleek modern UI */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
@@ -38,7 +83,7 @@
   border-radius: 9999px;
   background-color: rgba(59, 130, 246, 0.15);
   border: 1px solid rgba(59, 130, 246, 0.35);
-  color: #60a5fa;
+  color: #8392f8;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.75rem;
   font-weight: 600;
@@ -49,7 +94,7 @@
 
 .timestamp-badge:hover {
   background-color: rgba(59, 130, 246, 0.3);
-  border-color: #60a5fa;
+  border-color: #8392f8;
   color: #ffffff;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
@@ -59,7 +104,7 @@
 .markdown-body h1,
 .markdown-body h2,
 .markdown-body h3 {
-  color: #f8fafc;
+  color: #f6f7f9;
   font-weight: 700;
   margin-top: 1.25rem;
   margin-bottom: 0.5rem;
@@ -97,9 +142,9 @@
 }
 
 .markdown-body blockquote {
-  border-left: 3px solid #6366f1;
+  border-left: 3px solid #6674ef;
   padding-left: 0.75rem;
-  color: #94a3b8;
+  color: #9aa1ae;
   margin: 0.75rem 0;
 }
 
@@ -109,7 +154,7 @@
   border-radius: 0.25rem;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.8em;
-  color: #c084fc;
+  color: #a78bfa;
 }
 
 /* KaTeX formula display styling */
@@ -121,7 +166,7 @@
 
 .markdown-body .katex {
   font-size: 1.05em;
-  color: #e2e8f0;
+  color: #dcdfe5;
 }
 
 /* Shimmer animation for indeterminate AI generation status */
@@ -152,18 +197,18 @@
    ======================================================== */
 html.light,
 html.light body {
-  background-color: #f8fafc !important;
-  color: #0f172a !important;
+  background-color: rgb(var(--c-app)) !important;
+  color: rgb(var(--c-ink)) !important;
 }
 
 html.light .bg-slate-950 {
-  background-color: #f8fafc !important;
-  color: #0f172a !important;
+  background-color: rgb(var(--c-app)) !important;
+  color: rgb(var(--c-ink)) !important;
 }
 
 html.light .bg-slate-900 {
-  background-color: #ffffff !important;
-  color: #1e293b !important;
+  background-color: #fff !important;
+  color: #2a2e36 !important;
 }
 
 html.light .bg-slate-900\/95,
@@ -173,7 +218,7 @@ html.light .bg-slate-900\/80,
 html.light .bg-slate-900\/60,
 html.light .bg-slate-900\/40 {
   background-color: rgba(255, 255, 255, 0.95) !important;
-  color: #1e293b !important;
+  color: #2a2e36 !important;
 }
 
 html.light .bg-slate-950\/95,
@@ -183,37 +228,37 @@ html.light .bg-slate-950\/80,
 html.light .bg-slate-950\/60,
 html.light .bg-slate-950\/40 {
   background-color: rgba(248, 250, 252, 0.96) !important;
-  color: #0f172a !important;
+  color: rgb(var(--c-ink)) !important;
 }
 
 html.light .bg-slate-800,
 html.light .bg-slate-800\/80,
 html.light .bg-slate-800\/90 {
-  background-color: #f1f5f9 !important;
-  color: #0f172a !important;
+  background-color: rgb(var(--c-panel-raised)) !important;
+  color: rgb(var(--c-ink)) !important;
 }
 
 html.light .border-slate-800,
 html.light .border-slate-800\/90,
 html.light .border-slate-800\/80 {
-  border-color: #e2e8f0 !important;
+  border-color: rgb(var(--c-line)) !important;
 }
 
 html.light .border-slate-700,
 html.light .border-slate-700\/80,
 html.light .border-slate-700\/70,
 html.light .border-slate-700\/60 {
-  border-color: #cbd5e1 !important;
+  border-color: rgb(var(--c-line-strong)) !important;
 }
 
 html.light .text-slate-100,
 html.light .text-slate-200 {
-  color: #0f172a !important;
+  color: rgb(var(--c-ink)) !important;
 }
 
 /* Ensure text on slate panels becomes dark in light mode, but preserve white text on colored buttons/badges */
 html.light .text-white:not(.force-white):not(.btn-primary):not([class*="bg-blue-"]):not([class*="bg-indigo-"]):not([class*="bg-cyan-"]):not([class*="bg-purple-"]):not([class*="bg-emerald-"]):not([class*="bg-rose-"]):not([class*="bg-amber-"]) {
-  color: #0f172a !important;
+  color: rgb(var(--c-ink)) !important;
 }
 
 html.light .force-white,
@@ -221,44 +266,44 @@ html.light .text-white.force-white,
 html.light [class*="bg-blue-600"] .text-white,
 html.light [class*="bg-indigo-600"] .text-white,
 html.light [class*="bg-cyan-600"] .text-white {
-  color: #ffffff !important;
+  color: #fff !important;
 }
 
 html.light .text-slate-300,
 html.light .text-slate-400 {
-  color: #475569 !important;
+  color: rgb(var(--c-ink-muted)) !important;
 }
 
 html.light .text-slate-500 {
-  color: #64748b !important;
+  color: rgb(var(--c-ink-subtle)) !important;
 }
 
 /* Contrast enhancement for colored badges and accents in light mode */
 html.light .text-cyan-300,
 html.light .text-cyan-400 {
-  color: #0891b2 !important;
+  color: rgb(var(--c-accent-alt)) !important;
 }
 
 html.light .text-blue-300,
 html.light .text-blue-400 {
-  color: #2563eb !important;
+  color: rgb(var(--c-accent)) !important;
 }
 
 html.light .bg-cyan-600\/30 {
-  background-color: #cffafe !important;
-  border-color: #06b6d4 !important;
-  color: #0891b2 !important;
+  background-color: #ccfbf1 !important;
+  border-color: #14b8a6 !important;
+  color: rgb(var(--c-accent-alt)) !important;
 }
 
 html.light .bg-blue-600\/30 {
-  background-color: #dbeafe !important;
-  border-color: #3b82f6 !important;
-  color: #1d4ed8 !important;
+  background-color: #e0e5ff !important;
+  border-color: #6674ef !important;
+  color: #4447c4 !important;
 }
 
 html.light .bg-slate-850\/50 {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
+  background-color: #fff !important;
+  color: rgb(var(--c-ink)) !important;
 }
 
 html.light .hover\:bg-slate-800:hover,
@@ -266,50 +311,98 @@ html.light .hover\:bg-slate-800\/90:hover,
 html.light .hover\:bg-slate-800\/80:hover,
 html.light .hover\:bg-slate-700:hover,
 html.light .hover\:bg-slate-700\/80:hover {
-  background-color: #e2e8f0 !important;
-  color: #0f172a !important;
+  background-color: rgb(var(--c-line)) !important;
+  color: rgb(var(--c-ink)) !important;
 }
 
 html.light .custom-scrollbar::-webkit-scrollbar-track {
-  background: #f1f5f9 !important;
+  background: rgb(var(--c-panel-raised)) !important;
 }
 
 html.light .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #cbd5e1 !important;
+  background: rgb(var(--c-line-strong)) !important;
 }
 
 html.light .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8 !important;
+  background: #9aa1ae !important;
 }
 
 html.light .markdown-body h1,
 html.light .markdown-body h2,
 html.light .markdown-body h3,
 html.light .markdown-body strong {
-  color: #0f172a !important;
+  color: rgb(var(--c-ink)) !important;
 }
 
 html.light .markdown-body p,
 html.light .markdown-body li,
 html.light .markdown-body span {
-  color: #334155 !important;
+  color: #3d424d !important;
 }
 
 html.light .markdown-body .katex {
-  color: #0f172a !important;
+  color: rgb(var(--c-ink)) !important;
 }
 
 html.light .markdown-body blockquote {
-  background-color: #f1f5f9 !important;
-  border-left-color: #3b82f6 !important;
-  color: #334155 !important;
+  background-color: rgb(var(--c-panel-raised)) !important;
+  border-left-color: #6674ef !important;
+  color: #3d424d !important;
 }
 
 html.light input,
 html.light textarea,
 html.light select {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
-  border-color: #cbd5e1 !important;
+  background-color: #fff !important;
+  color: rgb(var(--c-ink)) !important;
+  border-color: rgb(var(--c-line-strong)) !important;
 }
 
+
+/* Count / status pills that use translucent dark-blue backgrounds */
+html.light .bg-blue-950\/60,
+html.light .bg-blue-950\/80 {
+  background-color: #e0e5ff !important;
+  border-color: #c6cfff !important;
+  color: #4447c4 !important;
+}
+
+/* ========================================================
+   Mobile workbench: panel toolbars stay out of the way until
+   the pane's "工具" toggle is on (touch screens have no hover).
+   ======================================================== */
+.mobile-workbench .legacy-title-badge {
+  display: none !important;
+}
+.mobile-workbench .panel-toolbar {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.mobile-workbench.show-tools .panel-toolbar {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+/* On phones the toolbar becomes one solid, horizontally scrollable strip
+   across the top of the panel instead of wrapping into overlapping pills */
+.mobile-workbench .panel-toolbar {
+  top: 0.375rem !important;
+  left: 0.375rem !important;
+  right: 0.375rem !important;
+  justify-content: flex-start !important;
+  flex-wrap: nowrap !important;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0.25rem;
+  border-radius: 0.875rem;
+  background: rgb(var(--c-panel));
+  border: 1px solid rgb(var(--c-line-strong) / 0.7);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+}
+.mobile-workbench .panel-toolbar::-webkit-scrollbar {
+  display: none;
+}
+.mobile-workbench .panel-toolbar > div,
+.mobile-workbench .panel-toolbar > span {
+  flex-wrap: nowrap !important;
+  flex-shrink: 0;
+}

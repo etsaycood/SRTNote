@@ -9,7 +9,8 @@ import {
   RotateCcw,
   ChevronLeft,
   ChevronRight,
-  Network
+  Network,
+  SlidersHorizontal
 } from 'lucide-react';
 
 interface MobileWorkspaceGridProps {
@@ -48,6 +49,9 @@ const SwipeablePane: React.FC<SwipeablePaneProps> = ({
   accentColor
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
+  // Panel toolbars are hidden on touch screens until the user asks for them,
+  // so they don't permanently cover the first lines of content.
+  const [showTools, setShowTools] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Sync scroll position when activeIndex changes or on mount
@@ -118,7 +122,7 @@ const SwipeablePane: React.FC<SwipeablePaneProps> = ({
       : 'bg-purple-600 text-white shadow-md shadow-purple-600/30 font-semibold';
 
   return (
-    <div className="relative w-full h-full flex flex-col min-h-0 overflow-hidden group/pane">
+    <div className={`mobile-workbench relative w-full h-full flex flex-col min-h-0 overflow-hidden group/pane ${showTools ? 'show-tools' : ''}`}>
       {/* Pane Top Bar: Tabs & Quick Switcher when multiple panels, or Add Sibling button */}
       <div className="flex-shrink-0 flex items-center justify-between px-2 py-1 z-30 select-none">
         {/* Left: Window Tabs / Indicators */}
@@ -153,7 +157,23 @@ const SwipeablePane: React.FC<SwipeablePaneProps> = ({
         </div>
 
         {/* Right: Sibling Window Add Button & Swipe Indicator */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {/* Toggle the active panel's toolbar */}
+          <button
+            type="button"
+            onClick={() => setShowTools((v) => !v)}
+            aria-pressed={showTools}
+            aria-label={showTools ? '隱藏面板工具列' : '顯示面板工具列'}
+            title={showTools ? '隱藏面板工具列' : '顯示面板工具列'}
+            className={`flex items-center gap-1 px-2 py-1 rounded-full text-[11px] border transition-colors ${
+              showTools
+                ? 'bg-blue-600 text-white force-white border-blue-500'
+                : 'bg-slate-800/80 text-slate-300 border-slate-700/60'
+            }`}
+          >
+            <SlidersHorizontal className="w-3 h-3" />
+            <span>工具</span>
+          </button>
           {panels.length > 1 && (
             <div className="flex items-center gap-1 text-slate-400 bg-slate-900/80 px-2 py-1 rounded-full border border-slate-800 text-[11px] font-mono">
               <button
@@ -187,11 +207,12 @@ const SwipeablePane: React.FC<SwipeablePaneProps> = ({
                 <button
                   key={id}
                   onClick={() => onReopenPanel?.(id)}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-colors"
+                  className="flex items-center gap-0.5 px-2 py-1 rounded-full text-[11px] bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-colors"
                   title={`加入${meta.name}至此窗格 (可左右滑動)`}
+                  aria-label={`加入${meta.name}`}
                 >
                   <Plus className="w-3 h-3 text-emerald-400" />
-                  <span>{meta.name}</span>
+                  {React.createElement(meta.icon, { className: 'w-3.5 h-3.5' })}
                 </button>
               );
             })}
@@ -302,43 +323,29 @@ export const MobileWorkspaceGrid: React.FC<MobileWorkspaceGridProps> = ({
     );
   }
 
-  // --- Resizing Handlers between Top and Bottom Panes ---
-  const handleStartResize = (e: React.MouseEvent | React.TouchEvent) => {
+  // --- Resizing Handlers between Top and Bottom Panes (Pointer Events) ---
+  const handleStartResize = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
-    const startY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const handle = e.currentTarget;
+    const pointerId = e.pointerId;
+    handle.setPointerCapture(pointerId);
+    const startY = e.clientY;
     const initialHeight = topHeightPercent;
     const containerHeight = containerRef.current?.clientHeight || 600;
 
-    const onMove = (moveY: number) => {
-      const deltaY = moveY - startY;
-      const deltaPercent = (deltaY / containerHeight) * 100;
+    const onMove = (ev: PointerEvent) => {
+      const deltaPercent = ((ev.clientY - startY) / containerHeight) * 100;
       setTopHeightPercent(Math.min(75, Math.max(25, initialHeight + deltaPercent)));
     };
-
-    const onMouseMove = (moveEvent: MouseEvent) => {
-      onMove(moveEvent.clientY);
+    const onUp = () => {
+      handle.removeEventListener('pointermove', onMove);
+      handle.removeEventListener('pointerup', onUp);
+      handle.removeEventListener('pointercancel', onUp);
+      if (handle.hasPointerCapture(pointerId)) handle.releasePointerCapture(pointerId);
     };
-
-    const onMouseUp = () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-
-    const onTouchMove = (moveEvent: TouchEvent) => {
-      if (moveEvent.touches.length > 0) {
-        onMove(moveEvent.touches[0].clientY);
-      }
-    };
-
-    const onTouchEnd = () => {
-      window.removeEventListener('touchmove', onTouchMove);
-      window.removeEventListener('touchend', onTouchEnd);
-    };
-
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    window.addEventListener('touchmove', onTouchMove);
-    window.addEventListener('touchend', onTouchEnd);
+    handle.addEventListener('pointermove', onMove);
+    handle.addEventListener('pointerup', onUp);
+    handle.addEventListener('pointercancel', onUp);
   };
 
   // Standard: Top and Bottom Panes (直立雙窗格，各顯示一個視窗，可左右滑動)
@@ -350,7 +357,7 @@ export const MobileWorkspaceGrid: React.FC<MobileWorkspaceGridProps> = ({
       {/* 1. Top Pane (上窗格: 影音視窗 / 同步簡報) */}
       <div
         className="w-full min-h-[140px] overflow-hidden flex flex-col"
-        style={{ height: `${topHeightPercent}%` }}
+        style={{ flex: `${topHeightPercent} 1 0px` }}
       >
         <SwipeablePane
           paneTitle="上窗格"
@@ -364,9 +371,11 @@ export const MobileWorkspaceGrid: React.FC<MobileWorkspaceGridProps> = ({
 
       {/* 2. Resizable Divider between Top and Bottom Panes */}
       <div
-        onMouseDown={handleStartResize}
-        onTouchStart={handleStartResize}
-        className="w-full h-3 flex items-center justify-center cursor-row-resize hover:bg-blue-500/20 active:bg-blue-500/40 rounded-full my-0.5 transition-colors group z-40 touch-none"
+        onPointerDown={handleStartResize}
+        role="separator"
+        aria-orientation="horizontal"
+        aria-label="拖曳調整上下窗格比例"
+        className="flex-shrink-0 w-full h-3 flex items-center justify-center cursor-row-resize hover:bg-blue-500/20 active:bg-blue-500/40 rounded-full my-0.5 transition-colors group z-40 touch-none"
         title="拖曳調整上下窗格比例"
       >
         <div className="h-1 w-14 rounded-full bg-slate-700 group-hover:bg-blue-400 group-active:bg-blue-400 transition-colors" />
@@ -374,8 +383,8 @@ export const MobileWorkspaceGrid: React.FC<MobileWorkspaceGridProps> = ({
 
       {/* 3. Bottom Pane (下窗格: 即時逐字稿 / 重點整理) */}
       <div
-        className="w-full min-h-[140px] flex-1 overflow-hidden flex flex-col"
-        style={{ height: `${100 - topHeightPercent}%` }}
+        className="w-full min-h-[140px] overflow-hidden flex flex-col"
+        style={{ flex: `${100 - topHeightPercent} 1 0px` }}
       >
         <SwipeablePane
           paneTitle="下窗格"

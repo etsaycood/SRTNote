@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PanelId } from '../types';
 import {
   FolderOpen,
@@ -25,9 +25,13 @@ import {
   Network,
   Sun,
   Moon,
-  Languages
+  Languages,
+  Download,
+  MoreHorizontal,
+  ChevronUp
 } from 'lucide-react';
 import { YoutubeIcon } from './icons/YoutubeIcon';
+import { SrtNoteLogo } from './icons/SrtNoteLogo';
 import { Theme, Language, t } from '../utils/i18n';
 
 interface NavbarProps {
@@ -104,7 +108,62 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [showUploadDropdown, setShowUploadDropdown] = useState(false);
   const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
   const [showLayoutDropdown, setShowLayoutDropdown] = useState(false);
+  const [showMoreDropdown, setShowMoreDropdown] = useState(false);
   const isLight = theme === 'light';
+
+  // Mobile: compact top bar, secondary actions live in the "⋯" menu,
+  // and the whole bar can be collapsed to a small pull tab.
+  const compact = isMobileMode;
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('srtnote_mobile_bar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const setCollapsed = (next: boolean) => {
+    setIsCollapsed(next);
+    try {
+      localStorage.setItem('srtnote_mobile_bar_collapsed', String(next));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const closeAllDropdowns = () => {
+    setShowUploadDropdown(false);
+    setShowSettingsDropdown(false);
+    setShowLayoutDropdown(false);
+    setShowMoreDropdown(false);
+  };
+
+  // Dismiss dropdowns on outside click or Escape
+  useEffect(() => {
+    if (!showUploadDropdown && !showSettingsDropdown && !showLayoutDropdown && !showMoreDropdown) return;
+    const handlePointerDown = (e: PointerEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target?.closest('[data-nav-dropdown]')) closeAllDropdowns();
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeAllDropdowns();
+    };
+    window.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showUploadDropdown, showSettingsDropdown, showLayoutDropdown, showMoreDropdown]);
+
+  // Run a file-input handler, then close the upload menu.
+  // The menu must stay mounted until the file dialog returns, otherwise the
+  // <input type="file"> is detached and its change event never reaches React.
+  const withUploadClose =
+    (handler: (e: React.ChangeEvent<HTMLInputElement>) => void) =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      handler(e);
+      setShowUploadDropdown(false);
+    };
 
   const handleTitleSubmit = () => {
     setIsEditingTitle(false);
@@ -123,23 +182,47 @@ export const Navbar: React.FC<NavbarProps> = ({
     mindmap: t('panel_mindmap', lang)
   };
 
+  if (compact && isCollapsed) {
+    // Collapsed: no layout space at all, just a small pull tab at the top centre
+    return (
+      <button
+        type="button"
+        onClick={() => setCollapsed(false)}
+        className="fixed top-0 left-1/2 -translate-x-1/2 z-50 h-5 px-4 rounded-b-xl bg-slate-800/90 backdrop-blur border border-t-0 border-slate-700 text-slate-300 hover:text-white flex items-center justify-center shadow-md"
+        title={t('expandBar', lang)}
+        aria-label={t('expandBar', lang)}
+      >
+        <ChevronDown className="w-4 h-4" />
+      </button>
+    );
+  }
+
+  const moreItemClass =
+    'w-full flex items-center gap-2.5 px-3.5 py-2.5 hover:bg-slate-800 text-slate-200 text-left transition-colors';
+
   return (
-    <header className="w-full bg-slate-900/95 backdrop-blur-xl border-b border-slate-800 px-4 md:px-6 py-2.5 flex items-center justify-between gap-4 z-40 select-none shadow-md">
+    <header
+      className={`w-full bg-slate-900/95 backdrop-blur-xl border-b border-slate-800 flex items-center justify-between z-40 select-none shadow-md ${
+        compact ? 'px-2 py-1 gap-2' : 'px-4 md:px-6 py-2.5 gap-4'
+      }`}
+    >
       {/* Left: Brand & Project Name */}
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/25">
-            <Sparkles className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="font-extrabold text-sm tracking-wider text-white">SRTNote</span>
-          </div>
+      <div className={`flex items-center min-w-0 ${compact ? 'gap-2' : 'gap-3'}`}>
+        <div className="flex items-center gap-2.5 flex-shrink-0">
+          <SrtNoteLogo className={`${compact ? 'w-7 h-7' : 'w-9 h-9'} flex-shrink-0 drop-shadow-sm`} />
+          {!compact && (
+            <div className="leading-none">
+              <span className="font-extrabold text-[15px] tracking-tight text-white">
+                SRT<span className="text-blue-400">Note</span>
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="h-5 w-px bg-slate-800 hidden md:block" />
 
         {/* Project Title (Click to Edit) */}
-        <div className="hidden md:flex items-center gap-2">
+        <div className={`${compact ? 'flex min-w-0' : 'hidden md:flex'} items-center gap-2`}>
           {isEditingTitle ? (
             <input
               type="text"
@@ -160,15 +243,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                 setIsEditingTitle(true);
               }}
               className="group flex items-center gap-1.5 text-xs text-slate-200 hover:text-white font-medium px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors"
-              title="點擊修改專案名稱"
+              title={t('editTitle', lang)}
             >
-              <span className="truncate max-w-[200px]">{projectTitle}</span>
+              <span className={`truncate ${compact ? 'max-w-[40vw]' : 'max-w-[200px]'}`}>{projectTitle}</span>
               <span className="text-[10px] text-slate-500 group-hover:text-blue-400">✏️</span>
             </button>
           )}
 
           {/* Connected Folder Badge */}
-          {folderName && (
+          {folderName && !compact && (
             <div className="flex items-center gap-1 text-[11px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded-full font-mono">
               <FolderCheck className="w-3 h-3" />
               <span className="truncate max-w-[120px]">{folderName}</span>
@@ -178,50 +261,59 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* Right: Operational Buttons */}
-      <div className="flex items-center gap-1.5 flex-shrink-0">
+      <div className={`flex items-center flex-shrink-0 ${compact ? 'gap-1' : 'gap-1.5'}`}>
         {/* Consolidated Open Folder & Upload Dropdown Button (Icon only) */}
-        <div className="relative">
+        <div className="relative" data-nav-dropdown>
           <button
-            onClick={() => setShowUploadDropdown(!showUploadDropdown)}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 transition-all flex items-center justify-center shadow-sm"
-            title="開啟特定資料夾或上傳影音/字幕/簡報"
+            onClick={() => {
+              const next = !showUploadDropdown;
+              closeAllDropdowns();
+              setShowUploadDropdown(next);
+            }}
+            aria-haspopup="menu"
+            aria-expanded={showUploadDropdown}
+            className="px-2 py-2 lg:px-2.5 lg:py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 transition-all flex items-center justify-center gap-1.5 text-xs font-medium shadow-sm"
+            title={t('openMenuTitle', lang)}
+            aria-label={t('openMenuTitle', lang)}
           >
             <FolderOpen className="w-4 h-4 text-amber-400" />
+            <span className="hidden lg:inline">{t('openMenu', lang)}</span>
+            <ChevronDown className={`hidden lg:block w-3 h-3 text-slate-400 transition-transform ${showUploadDropdown ? 'rotate-180' : ''}`} />
           </button>
 
           {showUploadDropdown && (
             <div
+              role="menu"
               className="absolute right-0 top-full mt-2 w-52 bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl py-1.5 z-50 animate-fade-in text-xs"
-              onClick={() => setShowUploadDropdown(false)}
             >
               {/* Option 1: Open Local Directory */}
               <button
                 type="button"
-                onClick={onOpenFolder}
+                onClick={() => { setShowUploadDropdown(false); onOpenFolder(); }}
                 className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-slate-800 text-amber-300 hover:text-amber-200 cursor-pointer transition-colors text-left font-medium"
               >
                 <FolderOpen className="w-4 h-4 text-amber-400" />
-                <span>讀取特定資料夾</span>
+                <span>{t('readFolder', lang)}</span>
               </button>
 
               <div className="h-px bg-slate-800 my-1" />
 
               <label className="flex items-center gap-2.5 px-3.5 py-2 hover:bg-slate-800 text-slate-200 cursor-pointer transition-colors">
                 <Video className="w-4 h-4 text-blue-400" />
-                <span>上傳影音 (MP4/MP3)</span>
-                <input type="file" accept="video/*,audio/*" onChange={onUploadMedia} className="hidden" />
+                <span>{t('uploadMedia', lang)}</span>
+                <input type="file" accept="video/*,audio/*" onChange={withUploadClose(onUploadMedia)} className="hidden" />
               </label>
 
               <label className="flex items-center gap-2.5 px-3.5 py-2 hover:bg-slate-800 text-slate-200 cursor-pointer transition-colors">
                 <FileText className="w-4 h-4 text-emerald-400" />
-                <span>上傳字幕 (SRT/VTT)</span>
-                <input type="file" accept=".srt,.vtt" onChange={onUploadSubtitles} className="hidden" />
+                <span>{t('uploadSubtitles', lang)}</span>
+                <input type="file" accept=".srt,.vtt" onChange={withUploadClose(onUploadSubtitles)} className="hidden" />
               </label>
 
               <label className="flex items-center gap-2.5 px-3.5 py-2 hover:bg-slate-800 text-slate-200 cursor-pointer transition-colors">
                 <Presentation className="w-4 h-4 text-amber-400" />
-                <span>上傳簡報 (PDF/圖片)</span>
-                <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={onUploadSlides} className="hidden" />
+                <span>{t('uploadSlidesMenu', lang)}</span>
+                <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={withUploadClose(onUploadSlides)} className="hidden" />
               </label>
 
               <div className="h-px bg-slate-800 my-1" />
@@ -230,11 +322,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               {onOpenYouTubeModal && (
                 <button
                   type="button"
-                  onClick={onOpenYouTubeModal}
+                  onClick={() => { setShowUploadDropdown(false); onOpenYouTubeModal(); }}
                   className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-slate-800 text-slate-200 cursor-pointer transition-colors text-left"
                 >
                   <YoutubeIcon className="w-4 h-4 text-red-500" />
-                  <span>貼上 YouTube 網址</span>
+                  <span>{t('pasteYoutube', lang)}</span>
                 </button>
               )}
 
@@ -242,11 +334,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               {onOpenPasteModal && (
                 <button
                   type="button"
-                  onClick={onOpenPasteModal}
+                  onClick={() => { setShowUploadDropdown(false); onOpenPasteModal(); }}
                   className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-slate-800 text-slate-200 cursor-pointer transition-colors text-left"
                 >
                   <Clipboard className="w-4 h-4 text-blue-400" />
-                  <span>貼上逐字稿文字</span>
+                  <span>{t('pasteTranscript', lang)}</span>
                 </button>
               )}
 
@@ -254,37 +346,39 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               <label className="flex items-center gap-2.5 px-3.5 py-2 hover:bg-slate-800 text-slate-200 cursor-pointer transition-colors">
                 <FileCheck2 className="w-4 h-4 text-purple-400" />
-                <span>匯入設定檔 (JSON)</span>
-                <input type="file" accept=".json" onChange={onImportConfig} className="hidden" />
+                <span>{t('importConfig', lang)}</span>
+                <input type="file" accept=".json" onChange={withUploadClose(onImportConfig)} className="hidden" />
               </label>
             </div>
           )}
         </div>
 
+        {/* Secondary actions: inline on desktop, moved into the "⋯" menu on mobile */}
+        <div className={compact ? 'hidden' : 'contents'}>
         {/* Save Config to Folder / Export JSON (Icon only) */}
         <button
           onClick={onSaveConfig}
           disabled={isSaving}
-          className={`p-2 rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center ${
+          className={`px-2 py-2 lg:px-2.5 lg:py-1.5 rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5 text-xs font-semibold disabled:opacity-60 disabled:cursor-wait ${
             saveSuccess
               ? 'bg-emerald-600 text-white shadow-emerald-600/30 ring-1 ring-emerald-400'
               : hasDirHandle
               ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/25'
               : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
           }`}
-          title={
-            saveSuccess
-              ? '已儲存！'
-              : hasDirHandle
-              ? '存檔至資料夾 (sync_config.json)'
-              : '導出設定檔 (sync_config.json)'
-          }
+          title={saveSuccess ? t('saveSuccess', lang) : hasDirHandle ? t('saveConfig', lang) : t('exportConfig', lang)}
+          aria-label={saveSuccess ? t('saveSuccess', lang) : hasDirHandle ? t('saveConfig', lang) : t('exportConfig', lang)}
         >
           {saveSuccess ? (
             <Check className="w-4 h-4" />
-          ) : (
+          ) : hasDirHandle ? (
             <Save className="w-4 h-4" />
+          ) : (
+            <Download className="w-4 h-4" />
           )}
+          <span className="hidden lg:inline">
+            {saveSuccess ? t('savedShort', lang) : hasDirHandle ? t('saveShort', lang) : t('exportShort', lang)}
+          </span>
         </button>
 
         {/* 雲端分享連結按鈕 (Icon only) */}
@@ -296,7 +390,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 ? 'bg-slate-100 hover:bg-slate-200 text-blue-600 hover:text-blue-700 border border-slate-200'
                 : 'bg-slate-800 hover:bg-slate-700 text-blue-400 hover:text-blue-300 border border-slate-700'
             }`}
-            title="產生雲端分享連結 (?s=p_代號 / d_代號 / j_代號)"
+            title={t('shareCloud', lang)}
+            aria-label={t('shareCloud', lang)}
           >
             <Share2 className="w-4 h-4" />
           </button>
@@ -314,11 +409,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               ? 'bg-slate-100 hover:bg-slate-200 text-cyan-700 hover:text-cyan-900 border border-slate-200'
               : 'bg-slate-800 hover:bg-slate-700 text-cyan-400 hover:text-cyan-300 border border-slate-700'
           }`}
-          title={
-            openPanels.includes('mindmap')
-              ? '互動心智圖面板：已開啟 (點擊關閉)'
-              : '開啟「互動心智圖」面板 (可收合展開、縮放與時間戳跳轉)'
-          }
+          title={openPanels.includes('mindmap') ? t('mindmapToggleOpen', lang) : t('mindmapToggleClose', lang)}
+          aria-label={openPanels.includes('mindmap') ? t('mindmapToggleOpen', lang) : t('mindmapToggleClose', lang)}
+          aria-pressed={openPanels.includes('mindmap')}
         >
           <Network className="w-4 h-4" />
         </button>
@@ -334,11 +427,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 ? 'bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200'
                 : 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700'
             }`}
-            title={
-              isMobileMode
-                ? '手機模式：已開啟 (上下窗格、左右滑動、極簡播放列，點擊切換為電腦模式)'
-                : '切換為手機/平板模式 (點擊開啟)'
-            }
+            title={isMobileMode ? t('mobileModeOn', lang) : t('mobileModeOff', lang)}
+            aria-label={isMobileMode ? t('mobileModeOn', lang) : t('mobileModeOff', lang)}
+            aria-pressed={isMobileMode}
           >
             <Smartphone className="w-4 h-4" />
           </button>
@@ -357,7 +448,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 ? 'bg-slate-50 text-slate-400 hover:text-slate-600 border border-slate-200'
                 : 'bg-slate-900 text-slate-500 hover:text-slate-300 border border-slate-800'
             }`}
-            title={showPlayerBar ? '隱藏底端播放列 (釋放更多視窗空間)' : '展開底端播放列'}
+            title={showPlayerBar ? t('playerBarHide', lang) : t('playerBarShow', lang)}
+            aria-label={showPlayerBar ? t('playerBarHide', lang) : t('playerBarShow', lang)}
+            aria-pressed={showPlayerBar}
           >
             <SlidersHorizontal className="w-4 h-4" />
           </button>
@@ -365,13 +458,15 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* 版面格式選單按鈕 (Dropdown) */}
         {!isMobileMode && onSelectPreset && (
-          <div className="relative">
+          <div className="relative" data-nav-dropdown>
             <button
               onClick={() => {
-                setShowLayoutDropdown(!showLayoutDropdown);
-                setShowSettingsDropdown(false);
-                setShowUploadDropdown(false);
+                const next = !showLayoutDropdown;
+                closeAllDropdowns();
+                setShowLayoutDropdown(next);
               }}
+              aria-haspopup="menu"
+              aria-expanded={showLayoutDropdown}
               className={`px-2.5 py-1.5 rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-1.5 text-xs font-medium ${
                 showLayoutDropdown
                   ? 'bg-blue-600 text-white force-white shadow-blue-600/30 ring-1 ring-blue-400'
@@ -379,10 +474,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ? 'bg-slate-100 hover:bg-slate-200 text-blue-600 hover:text-blue-700 border border-slate-200'
                   : 'bg-slate-800 hover:bg-slate-700 text-blue-400 hover:text-blue-300 border border-slate-700'
               }`}
-              title="切換工作區版面格式（研討學習、經典四宮格、心智圖專注、筆記專注）"
+              title={t('layoutPresetsTitle', lang)}
             >
               <LayoutGrid className={`w-4 h-4 ${showLayoutDropdown ? 'text-white force-white' : isLight ? 'text-blue-600' : 'text-blue-400'}`} />
-              <span className="hidden sm:inline">版面格式</span>
+              <span className="hidden sm:inline">{t('layoutPresets', lang)}</span>
               <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${showLayoutDropdown ? 'rotate-180' : ''}`} />
             </button>
 
@@ -392,7 +487,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="px-2.5 py-1 text-[11px] font-bold text-slate-400 border-b border-slate-800/80 mb-1">
-                  版面格式
+                  {t('layoutTitle', lang)}
                 </div>
 
                 <div className="space-y-0.5">
@@ -406,7 +501,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   >
                     <span>🧠</span>
                     <span className="font-semibold text-white group-hover:text-blue-400 transition-colors">
-                      研討學習模式
+                      {t('preset_study', lang)}
                     </span>
                   </button>
 
@@ -420,7 +515,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   >
                     <span>📊</span>
                     <span className="font-semibold text-white group-hover:text-blue-400 transition-colors">
-                      經典四宮格
+                      {t('preset_2x2', lang)}
                     </span>
                   </button>
 
@@ -434,7 +529,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   >
                     <span>🗺️</span>
                     <span className="font-semibold text-white group-hover:text-blue-400 transition-colors">
-                      心智圖專注
+                      {t('preset_mindmap', lang)}
                     </span>
                   </button>
 
@@ -448,7 +543,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   >
                     <span>📝</span>
                     <span className="font-semibold text-white group-hover:text-blue-400 transition-colors">
-                      筆記專注
+                      {t('preset_notes', lang)}
                     </span>
                   </button>
                 </div>
@@ -480,7 +575,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 ? 'bg-slate-100 hover:bg-slate-200 text-blue-600 hover:text-blue-700 border border-slate-200'
                 : 'bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 border border-slate-700'
             }`}
-            title={theme === 'dark' ? (lang === 'zh' ? '切換為亮色版面 (Light Mode)' : 'Switch to Light Mode') : (lang === 'zh' ? '切換為暗色版面 (Dark Mode)' : 'Switch to Dark Mode')}
+            title={theme === 'dark' ? t('themeLight', lang) : t('themeDark', lang)}
+            aria-label={theme === 'dark' ? t('themeLight', lang) : t('themeDark', lang)}
           >
             {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4 text-blue-600" />}
           </button>
@@ -502,16 +598,111 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         )}
 
+        </div>
+
+        {/* Mobile "⋯" overflow menu */}
+        {compact && (
+          <div className="relative" data-nav-dropdown>
+            <button
+              type="button"
+              onClick={() => {
+                const next = !showMoreDropdown;
+                closeAllDropdowns();
+                setShowMoreDropdown(next);
+              }}
+              aria-haspopup="menu"
+              aria-expanded={showMoreDropdown}
+              aria-label={t('moreActions', lang)}
+              title={t('moreActions', lang)}
+              className={`p-2 rounded-xl border transition-all flex items-center justify-center ${
+                showMoreDropdown
+                  ? 'bg-blue-600 text-white force-white border-blue-500'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+              }`}
+            >
+              <MoreHorizontal className="w-4 h-4" />
+            </button>
+
+            {showMoreDropdown && (
+              <div
+                role="menu"
+                className="absolute right-0 top-full mt-2 w-60 max-h-[70vh] overflow-y-auto bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl py-1.5 z-50 animate-fade-in text-xs"
+              >
+                <button type="button" className={moreItemClass} disabled={isSaving}
+                  onClick={() => { setShowMoreDropdown(false); onSaveConfig(); }}>
+                  {hasDirHandle ? <Save className="w-4 h-4 text-blue-400" /> : <Download className="w-4 h-4 text-blue-400" />}
+                  <span>{hasDirHandle ? t('saveConfig', lang) : t('exportConfig', lang)}</span>
+                </button>
+                {onOpenShareModal && (
+                  <button type="button" className={moreItemClass}
+                    onClick={() => { setShowMoreDropdown(false); onOpenShareModal(); }}>
+                    <Share2 className="w-4 h-4 text-blue-400" />
+                    <span>{t('shareShort', lang)}</span>
+                  </button>
+                )}
+                <button type="button" className={moreItemClass}
+                  onClick={() => { setShowMoreDropdown(false); onTogglePanel('mindmap'); }}>
+                  <Network className="w-4 h-4 text-cyan-400" />
+                  <span className="flex-1">{t('panel_mindmap', lang)}</span>
+                  {openPanels.includes('mindmap') && <Check className="w-3.5 h-3.5 text-cyan-400" />}
+                </button>
+                {onTogglePlayerBar && (
+                  <button type="button" className={moreItemClass}
+                    onClick={() => { setShowMoreDropdown(false); onTogglePlayerBar(); }}>
+                    <SlidersHorizontal className="w-4 h-4 text-slate-400" />
+                    <span className="flex-1">{showPlayerBar ? t('playerBarHide', lang) : t('playerBarShow', lang)}</span>
+                  </button>
+                )}
+                <div className="h-px bg-slate-800 my-1" />
+                {onToggleTheme && (
+                  <button type="button" className={moreItemClass}
+                    onClick={() => { setShowMoreDropdown(false); onToggleTheme(); }}>
+                    {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-blue-500" />}
+                    <span>{theme === 'dark' ? t('themeLight', lang) : t('themeDark', lang)}</span>
+                  </button>
+                )}
+                {onToggleLanguage && (
+                  <button type="button" className={moreItemClass}
+                    onClick={() => { setShowMoreDropdown(false); onToggleLanguage(); }}>
+                    <Languages className="w-4 h-4 text-blue-400" />
+                    <span>{lang === 'zh' ? 'English' : '繁體中文'}</span>
+                  </button>
+                )}
+                {onToggleMobileMode && (
+                  <button type="button" className={moreItemClass}
+                    onClick={() => { setShowMoreDropdown(false); onToggleMobileMode(); }}>
+                    <Smartphone className="w-4 h-4 text-slate-400" />
+                    <span>{t('switchDesktop', lang)}</span>
+                  </button>
+                )}
+                <div className="h-px bg-slate-800 my-1" />
+                <button type="button" className={moreItemClass}
+                  onClick={() => { setShowMoreDropdown(false); setCollapsed(true); }}>
+                  <ChevronUp className="w-4 h-4 text-slate-400" />
+                  <span>{t('collapseBar', lang)}</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* 統一設定入口 (Icon only) */}
-        <div className="relative">
+        <div className="relative" data-nav-dropdown>
           <button
-            onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
+            onClick={() => {
+              const next = !showSettingsDropdown;
+              closeAllDropdowns();
+              setShowSettingsDropdown(next);
+            }}
+            aria-haspopup="dialog"
+            aria-expanded={showSettingsDropdown}
             className={`p-2 rounded-xl border shadow-sm transition-all flex items-center justify-center ${
               isLight
                 ? 'bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200'
                 : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
             }`}
-            title="系統設定（AI 連線、版面視窗、示範專案）"
+            title={t('settingsTitle', lang)}
+            aria-label={t('settingsTitle', lang)}
           >
             <Settings className={`w-4 h-4 ${isLight ? 'text-slate-600' : 'text-slate-300'}`} />
           </button>
@@ -528,6 +719,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
                 <button
                   onClick={() => setShowSettingsDropdown(false)}
+                  aria-label={t('panelClose', lang)}
                   className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
                 >
                   <X className="w-3.5 h-3.5" />

@@ -33,6 +33,7 @@ import { Marked } from 'marked';
 import markedKatex from 'marked-katex-extension';
 import 'katex/dist/katex.min.css';
 import DOMPurify from 'dompurify';
+import { Language, t } from '../../utils/i18n';
 
 // 初始化支援 KaTeX LaTeX 數學公式解析之 Markdown 解析器
 const markdownParser = new Marked();
@@ -59,6 +60,7 @@ interface AISummaryPanelProps {
   isMaximized: boolean;
   onToggleMaximize: () => void;
   onClose?: () => void;
+  lang?: Language;
 }
 
 export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
@@ -75,7 +77,8 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
   onUpdateLMConfig,
   isMaximized,
   onToggleMaximize,
-  onClose
+  onClose,
+  lang = 'zh'
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [statusText, setStatusText] = useState<string>('');
@@ -380,7 +383,7 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
   return (
     <div className="relative w-full h-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col group shadow-lg">
       {/* Top Header Badge & Controls (Floating in top-right on hover) */}
-      <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5 pointer-events-auto opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-wrap">
+      <div className="absolute top-2 right-2 z-20 flex items-center justify-end gap-1.5 flex-wrap transition-opacity duration-200 panel-toolbar opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto [@media(hover:none)]:opacity-100 [@media(hover:none)]:pointer-events-auto">
         <div className="flex items-center gap-1.5 flex-wrap">
           {/* Title Badge (Hidden in docked mode) */}
           <div className="flex items-center gap-2 bg-slate-950/85 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700/60 shadow-md legacy-title-badge">
@@ -389,7 +392,7 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
             </span>
             <Sparkles className="w-3.5 h-3.5 text-purple-400" />
             <span className="text-xs font-bold tracking-wider text-slate-200">
-              重點整理
+              {t('panel_summary', lang)}
             </span>
           </div>
 
@@ -403,7 +406,7 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
                 title="點擊以終止 AI 生成並保留已生成內容"
               >
                 <Square className="w-3.5 h-3.5 fill-current" />
-                <span>終止生成 ({elapsedSeconds}s)</span>
+                <span>{t('stopGenerate', lang)} ({elapsedSeconds}s)</span>
               </button>
             ) : (
               <button
@@ -421,7 +424,8 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
             <button
               onClick={handleCopy}
               className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-              title="複製文字"
+              title={t('copy', lang)}
+              aria-label={t('copy', lang)}
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
@@ -435,7 +439,9 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
                   ? 'bg-purple-600/30 text-purple-300 border border-purple-500/40'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
-              title={isEditing ? '切換為預覽筆記' : '手動編輯筆記'}
+              title={isEditing ? t('previewNote', lang) : t('editNote', lang)}
+              aria-label={isEditing ? t('previewNote', lang) : t('editNote', lang)}
+              aria-pressed={isEditing}
             >
               <Edit3 className="w-3.5 h-3.5" />
             </button>
@@ -445,7 +451,8 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
               type="button"
               onClick={handleDownload}
               className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-              title="下載 Markdown 筆記 (.md)"
+              title={t('downloadNote', lang)}
+              aria-label={t('downloadNote', lang)}
             >
               <Download className="w-3.5 h-3.5" />
             </button>
@@ -453,7 +460,7 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
             {/* 上傳圖示按鈕 */}
             <label
               className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer transition-colors"
-              title="上傳 Markdown 筆記 (.md/.txt)"
+              title={t('uploadNote', lang)}
             >
               <Upload className="w-3.5 h-3.5" />
               <input
@@ -471,7 +478,8 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
           <button
             onClick={onToggleMaximize}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-            title={isMaximized ? '還原視窗' : '最大化視窗'}
+            title={isMaximized ? t('restoreWindow', lang) : t('maximizeWindow', lang)}
+            aria-label={isMaximized ? t('restoreWindow', lang) : t('maximizeWindow', lang)}
           >
             {isMaximized ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
           </button>
@@ -479,7 +487,8 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 transition-colors"
-              title="關閉此面板（可由右上角加回）"
+              title={t('closePanel', lang)}
+              aria-label={t('closePanel', lang)}
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -604,7 +613,7 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
       )}
 
       {/* Editor & Content Area (Full height underneath floating overlay) */}
-      <div className="flex-1 overflow-y-auto p-4 pt-3 custom-scrollbar bg-slate-900/40 h-full w-full">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 pt-3 custom-scrollbar bg-slate-900/40 w-full select-text">
         {isEditing ? (
           <div className="h-full flex flex-col gap-2">
             <div className="flex items-center justify-between text-xs text-slate-400 pb-1">
@@ -644,7 +653,7 @@ export const AISummaryPanel: React.FC<AISummaryPanelProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsEditing(true)}
-                  className="absolute -top-1 right-0 opacity-0 group-hover/note:opacity-100 p-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/70 shadow-md transition-all flex items-center gap-1 text-xs"
+                  className="absolute -top-1 right-0 opacity-0 group-hover/note:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 p-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/70 shadow-md transition-all flex items-center gap-1 text-xs"
                   title="手動編輯此筆記"
                 >
                   <Edit3 className="w-3.5 h-3.5 text-purple-400" />

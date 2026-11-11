@@ -117,7 +117,7 @@ export const AudioWaveform: React.FC<AudioWaveformProps> = ({
         ctx.fillRect(minX, 0, maxX - minX, height);
 
         // Range border markers
-        ctx.strokeStyle = '#a855f7';
+        ctx.strokeStyle = '#8b5cf6';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(minX, 0);
@@ -140,14 +140,14 @@ export const AudioWaveform: React.FC<AudioWaveformProps> = ({
 
         if (isPlayed) {
           const grad = ctx.createLinearGradient(0, topY, 0, topY + barHeight);
-          grad.addColorStop(0, '#38bdf8');
-          grad.addColorStop(0.5, '#2563eb');
-          grad.addColorStop(1, '#0284c7');
+          grad.addColorStop(0, '#2dd4bf');
+          grad.addColorStop(0.5, '#5159e0');
+          grad.addColorStop(1, '#0d9488');
           ctx.fillStyle = grad;
         } else if (isInRange) {
-          ctx.fillStyle = '#c084fc'; // Purple highlight for unplayed speech inside selected range
+          ctx.fillStyle = '#a78bfa'; // Purple highlight for unplayed speech inside selected range
         } else {
-          ctx.fillStyle = rawPeak > 0.3 ? '#64748b' : '#334155';
+          ctx.fillStyle = rawPeak > 0.3 ? '#717887' : '#3d424d';
         }
 
         ctx.beginPath();
@@ -161,7 +161,7 @@ export const AudioWaveform: React.FC<AudioWaveformProps> = ({
         const maxX = Math.max(rangeStartX, rangeEndX);
 
         // In Handle (Start)
-        ctx.fillStyle = '#a855f7';
+        ctx.fillStyle = '#8b5cf6';
         ctx.beginPath();
         ctx.roundRect(minX - 4, 1, 8, 14, 3);
         ctx.fill();
@@ -170,7 +170,7 @@ export const AudioWaveform: React.FC<AudioWaveformProps> = ({
         ctx.stroke();
 
         // Out Handle (End)
-        ctx.fillStyle = '#a855f7';
+        ctx.fillStyle = '#8b5cf6';
         ctx.beginPath();
         ctx.roundRect(maxX - 4, height - 15, 8, 14, 3);
         ctx.fill();
@@ -199,7 +199,7 @@ export const AudioWaveform: React.FC<AudioWaveformProps> = ({
         ctx.beginPath();
         ctx.arc(playX, centerY, 5, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = '#0284c7';
+        ctx.strokeStyle = '#0d9488';
         ctx.lineWidth = 2;
         ctx.stroke();
       }
@@ -231,12 +231,12 @@ export const AudioWaveform: React.FC<AudioWaveformProps> = ({
 
         if (isPlayed) {
           const grad = ctx.createLinearGradient(0, topY, 0, topY + barHeight);
-          grad.addColorStop(0, '#38bdf8');
-          grad.addColorStop(0.5, '#3b82f6');
-          grad.addColorStop(1, '#1d4ed8');
+          grad.addColorStop(0, '#2dd4bf');
+          grad.addColorStop(0.5, '#6674ef');
+          grad.addColorStop(1, '#4447c4');
           ctx.fillStyle = grad;
         } else {
-          ctx.fillStyle = hasSpeech ? '#64748b' : '#334155';
+          ctx.fillStyle = hasSpeech ? '#717887' : '#3d424d';
         }
 
         ctx.beginPath();
@@ -247,7 +247,7 @@ export const AudioWaveform: React.FC<AudioWaveformProps> = ({
       const currentZoomRatio = (currentTime - windowStart) / (windowEnd - windowStart);
       const playX = currentZoomRatio * width;
 
-      ctx.strokeStyle = '#38bdf8';
+      ctx.strokeStyle = '#2dd4bf';
       ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.moveTo(playX, 0);

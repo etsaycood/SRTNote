@@ -128,7 +128,7 @@ const createSlideSvg = (title: string, subtitle: string, bullets: string[], tag:
     `).join('')}
 
     <!-- Footer -->
-    <text x="752" y="420" fill="#64748b" font-family="system-ui, -apple-system, sans-serif" font-size="12" text-anchor="end">SyncNote Studio • 會議簡報展示</text>
+    <text x="752" y="420" fill="#64748b" font-family="system-ui, -apple-system, sans-serif" font-size="12" text-anchor="end">SRTNote Studio • 會議簡報展示</text>
   </svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 };

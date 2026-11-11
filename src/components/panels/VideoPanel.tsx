@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { YoutubeIcon } from '../icons/YoutubeIcon';
 import { formatTime } from '../../utils/timeFormatter';
+import { Language, t } from '../../utils/i18n';
 
 interface VideoPanelProps {
   mediaUrl?: string;
@@ -48,6 +49,7 @@ interface VideoPanelProps {
   currentSubtitleText?: string;
   onUploadMedia: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onOpenYouTubeModal?: () => void;
+  lang?: Language;
 }
 
 export const VideoPanel: React.FC<VideoPanelProps> = ({
@@ -75,7 +77,8 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
   currentSpeaker,
   currentSubtitleText,
   onUploadMedia,
-  onOpenYouTubeModal
+  onOpenYouTubeModal,
+  lang = 'zh'
 }) => {
   const activeLoopMode: LoopMode = loopMode || (isLooping ? 'single' : 'off');
   const handleLoopToggle = onToggleLoopMode || onToggleLoop;
@@ -385,7 +388,7 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
     }
   }, [playbackRate, volume, isMuted, mediaType]);
 
-  // Regular polling when YouTube is playing to update SyncNote global currentTime & duration
+  // Regular polling when YouTube is playing to update SRTNote global currentTime & duration
   useEffect(() => {
     if (mediaType !== 'youtube' || !isPlaying) return;
 
@@ -462,9 +465,9 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
         const y = (height - barHeight) / 2;
 
         const gradient = ctx.createLinearGradient(0, y, 0, y + barHeight);
-        gradient.addColorStop(0, '#3b82f6');
-        gradient.addColorStop(0.5, '#6366f1');
-        gradient.addColorStop(1, '#a855f7');
+        gradient.addColorStop(0, '#6674ef');
+        gradient.addColorStop(0.5, '#6674ef');
+        gradient.addColorStop(1, '#8b5cf6');
 
         ctx.fillStyle = gradient;
         ctx.beginPath();
@@ -500,12 +503,16 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
     <div className="relative w-full h-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col group shadow-lg">
       {/* Top Header Badge & Controls (Floating in top-right on hover) */}
       <div
-        className={`absolute top-2 right-2 z-40 flex items-center gap-1.5 pointer-events-auto transition-opacity duration-200 flex-wrap ${
+        className={`panel-toolbar absolute top-2 z-40 flex items-center gap-1.5 transition-opacity duration-200 flex-wrap ${
+          // YouTube: top-LEFT so it doesn't cover the YouTube player's own
+          // top-right buttons (share, watch later …). Others: top-right.
+          mediaType === 'youtube' ? 'left-2' : 'right-2'
+        } ${
           mediaType === 'video' && mediaUrl
             ? showControls
-              ? 'opacity-100'
-              : 'opacity-0 pointer-events-none'
-            : 'opacity-0 group-hover:opacity-100'
+              ? 'opacity-100 pointer-events-auto'
+              : 'opacity-0 pointer-events-none focus-within:opacity-100 focus-within:pointer-events-auto'
+            : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto [@media(hover:none)]:opacity-100 [@media(hover:none)]:pointer-events-auto'
         }`}
       >
         <div className="flex items-center gap-2 bg-slate-950/85 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700/60 shadow-md legacy-title-badge">
@@ -586,7 +593,8 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
           <button
             onClick={onToggleMaximize}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors legacy-window-ctrl"
-            title={isMaximized ? '還原視窗' : '最大化視窗'}
+            title={isMaximized ? t('restoreWindow', lang) : t('maximizeWindow', lang)}
+            aria-label={isMaximized ? t('restoreWindow', lang) : t('maximizeWindow', lang)}
           >
             {isMaximized ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
           </button>
@@ -594,7 +602,8 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 transition-colors legacy-window-ctrl"
-              title="關閉此面板（可由右上角加回）"
+              title={t('closePanel', lang)}
+              aria-label={t('closePanel', lang)}
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -603,7 +612,7 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
       </div>
 
       {/* Main Content Area */}
-      <div className="relative flex-1 w-full h-full flex items-center justify-center bg-slate-950 overflow-hidden">
+      <div className="relative flex-1 min-h-0 w-full flex items-center justify-center bg-slate-950 overflow-hidden">
         {mediaType === 'youtube' && youtubeVideoId ? (
           /* YouTube Player View */
           <div className="relative w-full h-full flex items-center justify-center bg-black">
@@ -840,6 +849,24 @@ export const VideoPanel: React.FC<VideoPanelProps> = ({
               height={180}
               className="w-full max-w-lg h-36 object-contain z-10"
             />
+
+            {/* Play/Pause affordance — the bottom player bar is hidden by default,
+                so audio-only media (and the simulated demo) needs a visible control here */}
+            {(mediaUrl || duration > 0) && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPlayPause();
+                }}
+                aria-label={isPlaying ? 'Pause' : 'Play'}
+                className={`absolute z-20 w-14 h-14 rounded-full flex items-center justify-center bg-blue-600/90 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30 transition-opacity duration-200 ${
+                  isPlaying ? 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100' : 'opacity-100'
+                }`}
+              >
+                {isPlaying ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current ml-0.5" />}
+              </button>
+            )}
 
 
             {/* Current Live Subtitle Banner Overlay */}

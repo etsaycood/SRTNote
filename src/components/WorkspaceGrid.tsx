@@ -158,98 +158,101 @@ export const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({
     return () => window.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // --- Split Resize Handlers ---
-  const handleColResizeStart = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const container = containerRef.current;
-    if (!container) return;
+  // --- Split Resize Handlers (Pointer Events: mouse, touch & pen) ---
+  type SplitKey = keyof DockLayoutConfig['splitRatios'];
+  // While dragging, ratios live in local state so only this grid re-renders;
+  // the layout is committed once on release.
+  const [draftRatios, setDraftRatios] = useState<DockLayoutConfig['splitRatios'] | null>(null);
+  const [resizeAxis, setResizeAxis] = useState<'col' | 'row' | null>(null);
+  const layoutRef = useRef(layout);
+  layoutRef.current = layout;
+  const ratios = draftRatios ?? layout.splitRatios;
 
-    const startX = e.clientX;
-    const initialSplit = layout.splitRatios.colSplit;
-    const containerWidth = container.clientWidth;
+  const clampSplit = (v: number) => Math.round(Math.min(80, Math.max(20, v)));
 
-    const onMouseMove = (moveEvent: MouseEvent) => {
-      const deltaX = moveEvent.clientX - startX;
-      const deltaPercent = (deltaX / containerWidth) * 100;
-      const nextSplit = Math.min(80, Math.max(20, initialSplit + deltaPercent));
-      onChangeLayout({
-        ...layout,
-        splitRatios: {
-          ...layout.splitRatios,
-          colSplit: Math.round(nextSplit)
-        }
-      });
-    };
-
-    const onMouseUp = () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
+  const commitRatios = (next: DockLayoutConfig['splitRatios']) => {
+    onChangeLayout({ ...layoutRef.current, splitRatios: next });
   };
 
-  const handleLeftRowResizeStart = (e: React.MouseEvent) => {
+  const handleResizeStart = (e: React.PointerEvent<HTMLDivElement>, key: SplitKey) => {
+    if (e.button !== 0) return;
     e.preventDefault();
     const container = containerRef.current;
     if (!container) return;
 
-    const startY = e.clientY;
-    const initialSplit = layout.splitRatios.leftRowSplit;
-    const containerHeight = container.clientHeight;
+    const isCol = key === 'colSplit';
+    const handle = e.currentTarget;
+    const pointerId = e.pointerId;
+    handle.setPointerCapture(pointerId);
 
-    const onMouseMove = (moveEvent: MouseEvent) => {
-      const deltaY = moveEvent.clientY - startY;
-      const deltaPercent = (deltaY / containerHeight) * 100;
-      const nextSplit = Math.min(80, Math.max(20, initialSplit + deltaPercent));
-      onChangeLayout({
-        ...layout,
-        splitRatios: {
-          ...layout.splitRatios,
-          leftRowSplit: Math.round(nextSplit)
-        }
-      });
+    const start = isCol ? e.clientX : e.clientY;
+    const size = isCol ? container.clientWidth : container.clientHeight;
+    const initial = layoutRef.current.splitRatios;
+    let latest = initial;
+    setResizeAxis(isCol ? 'col' : 'row');
+
+    const onMove = (ev: PointerEvent) => {
+      const delta = ((isCol ? ev.clientX : ev.clientY) - start) / size * 100;
+      latest = { ...initial, [key]: clampSplit(initial[key] + delta) };
+      setDraftRatios(latest);
     };
-
-    const onMouseUp = () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
+    const onUp = () => {
+      handle.removeEventListener('pointermove', onMove);
+      handle.removeEventListener('pointerup', onUp);
+      handle.removeEventListener('pointercancel', onUp);
+      if (handle.hasPointerCapture(pointerId)) handle.releasePointerCapture(pointerId);
+      setResizeAxis(null);
+      setDraftRatios(null);
+      if (latest !== initial) commitRatios(latest);
     };
-
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
+    handle.addEventListener('pointermove', onMove);
+    handle.addEventListener('pointerup', onUp);
+    handle.addEventListener('pointercancel', onUp);
   };
 
-  const handleRightRowResizeStart = (e: React.MouseEvent) => {
+  const handleResizeKeyDown = (e: React.KeyboardEvent<HTMLDivElement>, key: SplitKey) => {
+    const isCol = key === 'colSplit';
+    const dec = isCol ? 'ArrowLeft' : 'ArrowUp';
+    const inc = isCol ? 'ArrowRight' : 'ArrowDown';
+    const step = e.shiftKey ? 10 : 2;
+    let next: number | null = null;
+    if (e.key === dec) next = layout.splitRatios[key] - step;
+    else if (e.key === inc) next = layout.splitRatios[key] + step;
+    else if (e.key === 'Home') next = 20;
+    else if (e.key === 'End') next = 80;
+    if (next === null) return;
     e.preventDefault();
-    const container = containerRef.current;
-    if (!container) return;
+    commitRatios({ ...layout.splitRatios, [key]: clampSplit(next) });
+  };
 
-    const startY = e.clientY;
-    const initialSplit = layout.splitRatios.rightRowSplit;
-    const containerHeight = container.clientHeight;
-
-    const onMouseMove = (moveEvent: MouseEvent) => {
-      const deltaY = moveEvent.clientY - startY;
-      const deltaPercent = (deltaY / containerHeight) * 100;
-      const nextSplit = Math.min(80, Math.max(20, initialSplit + deltaPercent));
-      onChangeLayout({
-        ...layout,
-        splitRatios: {
-          ...layout.splitRatios,
-          rightRowSplit: Math.round(nextSplit)
-        }
-      });
-    };
-
-    const onMouseUp = () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
+  const renderResizer = (key: SplitKey) => {
+    const isCol = key === 'colSplit';
+    const label = isCol
+      ? (lang === 'en' ? 'Drag to resize column width' : '拖曳調整左右欄位寬度')
+      : (lang === 'en' ? 'Drag to resize row height' : '拖曳調整上下窗格高度');
+    return (
+      <div
+        role="separator"
+        tabIndex={0}
+        aria-orientation={isCol ? 'vertical' : 'horizontal'}
+        aria-valuemin={20}
+        aria-valuemax={80}
+        aria-valuenow={ratios[key]}
+        aria-label={label}
+        title={label}
+        onPointerDown={(e) => handleResizeStart(e, key)}
+        onKeyDown={(e) => handleResizeKeyDown(e, key)}
+        className={`group/resizer flex-shrink-0 flex items-center justify-center z-20 touch-none transition-colors hover:bg-blue-500/20 active:bg-blue-500/40 focus-visible:outline-none focus-visible:bg-blue-500/30 ${
+          isCol ? 'w-2 mx-0.5 h-full flex-col cursor-col-resize' : 'h-2 my-0.5 w-full cursor-row-resize'
+        }`}
+      >
+        <div
+          className={`rounded-full bg-slate-700/70 group-hover/resizer:bg-blue-400 group-focus-visible/resizer:bg-blue-400 transition-colors ${
+            isCol ? 'h-12 w-1' : 'w-12 h-1'
+          }`}
+        />
+      </div>
+    );
   };
 
   // --- Tab & Slot Actions ---
@@ -290,6 +293,11 @@ export const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({
     setDraggedPanel({ panelId, fromSlot: slotId });
   };
 
+  const handleTabDragEnd = () => {
+    setDraggedPanel(null);
+    setDragOverSlot(null);
+  };
+
   const handleSlotDragOver = (e: React.DragEvent, slotId: DockSlotId) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
@@ -298,7 +306,10 @@ export const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({
     }
   };
 
-  const handleSlotDragLeave = (_e: React.DragEvent, slotId: DockSlotId) => {
+  const handleSlotDragLeave = (e: React.DragEvent, slotId: DockSlotId) => {
+    // dragleave also fires when moving onto a child element; ignore those
+    const related = e.relatedTarget as Node | null;
+    if (related && e.currentTarget.contains(related)) return;
     if (dragOverSlot === slotId) {
       setDragOverSlot(null);
     }
@@ -397,7 +408,7 @@ export const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({
         {/* Slot Tab Header */}
         <div className="h-8 min-h-[32px] bg-slate-950/95 border-b border-slate-800/90 px-1.5 flex items-center justify-between select-none z-30 flex-shrink-0">
           {/* Left: Tab List */}
-          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 min-w-0 flex-1">
+          <div role="tablist" className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 min-w-0 flex-1">
             {slot.tabs.map((tabId, index) => {
               const meta = getPanelMeta(tabId, lang);
               const Icon = meta.icon;
@@ -409,13 +420,27 @@ export const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({
                   key={tabId}
                   draggable
                   onDragStart={(e) => handleTabDragStart(e, tabId, slotId)}
+                  onDragEnd={handleTabDragEnd}
                   onDragOver={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                   }}
                   onDrop={(e) => handleTabDropReorder(e, slotId, index)}
                   onClick={() => handleSetActiveTab(slotId, tabId)}
-                  className={`group/tab relative flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium transition-all cursor-pointer flex-shrink-0 border ${
+                  onKeyDown={(e) => {
+                    if (e.target !== e.currentTarget) return;
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSetActiveTab(slotId, tabId);
+                    } else if (e.key === 'Delete') {
+                      e.preventDefault();
+                      handleCloseTab(tabId);
+                    }
+                  }}
+                  role="tab"
+                  tabIndex={0}
+                  aria-selected={isActive}
+                  className={`group/tab relative flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium transition-all cursor-pointer flex-shrink-0 border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                     isActive
                       ? `bg-slate-900 text-slate-100 border-slate-700/80 shadow-sm ${meta.borderActive}`
                       : 'bg-slate-950/40 text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border-transparent'
@@ -437,6 +462,9 @@ export const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({
                         isMoving ? 'text-blue-400 bg-slate-800' : 'text-slate-500 opacity-60 group-hover/tab:opacity-100'
                       }`}
                       title={lang === 'en' ? 'Quickly move to another slot' : '快速移至其他窗格位置'}
+                      aria-label={lang === 'en' ? 'Quickly move to another slot' : '快速移至其他窗格位置'}
+                      aria-haspopup="menu"
+                      aria-expanded={isMoving}
                     >
                       <ChevronDown className="w-3 h-3" />
                     </button>
@@ -497,6 +525,7 @@ export const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({
                     }}
                     className="p-0.5 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-500/20 transition-colors"
                     title={lang === 'en' ? `Close "${meta.title}" tab` : `關閉「${meta.title}」標籤頁`}
+                    aria-label={lang === 'en' ? `Close "${meta.title}" tab` : `關閉「${meta.title}」標籤頁`}
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -518,6 +547,9 @@ export const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({
                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
                 title={lang === 'en' ? 'Add/merge tabs into this slot' : '在此窗格加回/合併其他標籤頁'}
+                aria-label={lang === 'en' ? 'Add/merge tabs into this slot' : '在此窗格加回/合併其他標籤頁'}
+                aria-haspopup="menu"
+                aria-expanded={openAddMenuSlot === slotId}
               >
                 <Plus className="w-3.5 h-3.5" />
               </button>
@@ -565,6 +597,7 @@ export const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({
               onClick={() => onToggleMaximizePanel(activeTab)}
               className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
               title={t('maximizeSlot', lang)}
+              aria-label={t('maximizeSlot', lang)}
             >
               <Maximize2 className="w-3.5 h-3.5" />
             </button>
@@ -613,7 +646,14 @@ export const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({
   }
 
   // --- Normal 4-Quadrant Dock Layout ---
-  const { colSplit, leftRowSplit, rightRowSplit } = layout.splitRatios;
+  // Sizes use flex-grow ratios with a 0 basis, so the resizer bars are
+  // subtracted first and the panes never sum to more than 100%.
+  const { colSplit, leftRowSplit, rightRowSplit } = ratios;
+  const paneFlex = (ratio: number, minPx: number, axis: 'w' | 'h'): React.CSSProperties => ({
+    flex: `${ratio} 1 0px`,
+    ...(axis === 'h' ? { minHeight: minPx } : { minWidth: minPx })
+  });
+  const FULL: React.CSSProperties = { flex: '1 1 0px', minHeight: 0 };
 
   const hasTopLeft = layout.slots.topLeft.tabs.length > 0;
   const hasBottomLeft = layout.slots.bottomLeft.tabs.length > 0;
@@ -630,102 +670,56 @@ export const WorkspaceGrid: React.FC<WorkspaceGridProps> = ({
         {/* Left Column */}
         {hasLeftCol && (
           <div
-            style={{
-              width: hasRightCol ? `${colSplit}%` : '100%'
-            }}
-            className="h-full flex flex-col min-w-[20%] transition-none relative"
+            style={hasRightCol ? paneFlex(colSplit, 200, 'w') : FULL}
+            className="h-full flex flex-col min-w-0 relative"
           >
-            {/* Top Left Slot */}
-            {hasTopLeft ? (
-              renderDockSlot(
-                'topLeft',
-                hasBottomLeft
-                  ? { height: `${leftRowSplit}%`, minHeight: '120px' }
-                  : { height: '100%' }
-              )
-            ) : draggedPanel ? (
-              renderDockSlot('topLeft')
-            ) : null}
+            {hasTopLeft
+              ? renderDockSlot('topLeft', hasBottomLeft ? paneFlex(leftRowSplit, 120, 'h') : FULL)
+              : draggedPanel
+              ? renderDockSlot('topLeft')
+              : null}
 
-            {/* Left Horizontal Resizer (Only if both top and bottom have tabs) */}
-            {hasTopLeft && hasBottomLeft && (
-              <div
-                onMouseDown={handleLeftRowResizeStart}
-                className="group/hresizer h-2 my-0.5 w-full flex items-center justify-center cursor-row-resize z-20 hover:bg-blue-500/20 active:bg-blue-500/40 transition-colors"
-                title={lang === 'en' ? 'Drag to resize row height' : '拖曳調整上下窗格高度'}
-              >
-                <div className="w-12 h-1 rounded-full bg-slate-700/70 group-hover/hresizer:bg-blue-400 transition-colors" />
-              </div>
-            )}
+            {hasTopLeft && hasBottomLeft && renderResizer('leftRowSplit')}
 
-            {/* Bottom Left Slot */}
-            {hasBottomLeft ? (
-              renderDockSlot(
-                'bottomLeft',
-                hasTopLeft
-                  ? { height: `${100 - leftRowSplit}%`, minHeight: '120px' }
-                  : { height: '100%' }
-              )
-            ) : draggedPanel ? (
-              renderDockSlot('bottomLeft')
-            ) : null}
+            {hasBottomLeft
+              ? renderDockSlot('bottomLeft', hasTopLeft ? paneFlex(100 - leftRowSplit, 120, 'h') : FULL)
+              : draggedPanel
+              ? renderDockSlot('bottomLeft')
+              : null}
           </div>
         )}
 
         {/* Central Vertical Resizer (Between Left and Right Columns) */}
-        {hasLeftCol && hasRightCol && (
-          <div
-            onMouseDown={handleColResizeStart}
-            className="group/vresizer w-2 mx-0.5 h-full flex flex-col items-center justify-center cursor-col-resize z-20 hover:bg-blue-500/20 active:bg-blue-500/40 transition-colors flex-shrink-0"
-            title={lang === 'en' ? 'Drag to resize column width' : '拖曳調整左右欄位寬度'}
-          >
-            <div className="h-12 w-1 rounded-full bg-slate-700/70 group-hover/vresizer:bg-blue-400 transition-colors" />
-          </div>
-        )}
+        {hasLeftCol && hasRightCol && renderResizer('colSplit')}
 
         {/* Right Column */}
         {hasRightCol && (
           <div
-            style={{
-              width: hasLeftCol ? `${100 - colSplit}%` : '100%'
-            }}
-            className="h-full flex flex-col min-w-[20%] transition-none relative"
+            style={hasLeftCol ? paneFlex(100 - colSplit, 200, 'w') : FULL}
+            className="h-full flex flex-col min-w-0 relative"
           >
-            {/* Top Right Slot */}
-            {hasTopRight ? (
-              renderDockSlot(
-                'topRight',
-                hasBottomRight
-                  ? { height: `${rightRowSplit}%`, minHeight: '120px' }
-                  : { height: '100%' }
-              )
-            ) : draggedPanel ? (
-              renderDockSlot('topRight')
-            ) : null}
+            {hasTopRight
+              ? renderDockSlot('topRight', hasBottomRight ? paneFlex(rightRowSplit, 120, 'h') : FULL)
+              : draggedPanel
+              ? renderDockSlot('topRight')
+              : null}
 
-            {/* Right Horizontal Resizer (Only if both top and bottom have tabs) */}
-            {hasTopRight && hasBottomRight && (
-              <div
-                onMouseDown={handleRightRowResizeStart}
-                className="group/hresizer h-2 my-0.5 w-full flex items-center justify-center cursor-row-resize z-20 hover:bg-blue-500/20 active:bg-blue-500/40 transition-colors"
-                title={lang === 'en' ? 'Drag to resize row height' : '拖曳調整上下窗格高度'}
-              >
-                <div className="w-12 h-1 rounded-full bg-slate-700/70 group-hover/hresizer:bg-blue-400 transition-colors" />
-              </div>
-            )}
+            {hasTopRight && hasBottomRight && renderResizer('rightRowSplit')}
 
-            {/* Bottom Right Slot */}
-            {hasBottomRight ? (
-              renderDockSlot(
-                'bottomRight',
-                hasTopRight
-                  ? { height: `${100 - rightRowSplit}%`, minHeight: '120px' }
-                  : { height: '100%' }
-              )
-            ) : draggedPanel ? (
-              renderDockSlot('bottomRight')
-            ) : null}
+            {hasBottomRight
+              ? renderDockSlot('bottomRight', hasTopRight ? paneFlex(100 - rightRowSplit, 120, 'h') : FULL)
+              : draggedPanel
+              ? renderDockSlot('bottomRight')
+              : null}
           </div>
+        )}
+
+        {/* Shield iframes (YouTube) from stealing pointer events while resizing */}
+        {resizeAxis && (
+          <div
+            aria-hidden="true"
+            className={`fixed inset-0 z-[100] ${resizeAxis === 'col' ? 'cursor-col-resize' : 'cursor-row-resize'}`}
+          />
         )}
       </div>
     </div>

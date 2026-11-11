@@ -21,6 +21,7 @@ import {
   Download,
   Upload
 } from 'lucide-react';
+import { Language, t } from '../../utils/i18n';
 
 interface MindMapPanelProps {
   mindMapContent: string;
@@ -32,6 +33,7 @@ interface MindMapPanelProps {
   onToggleMaximize: () => void;
   onClose?: () => void;
   theme?: 'dark' | 'light';
+  lang?: Language;
 }
 
 interface PositionedNode {
@@ -72,7 +74,7 @@ interface BranchPalette {
 const BRANCH_PALETTES: BranchPalette[] = [
   {
     name: 'indigo',
-    stroke: '#6366f1',
+    stroke: '#6674ef',
     cardBg: 'bg-slate-900/95',
     cardBorder: 'border-indigo-500/45',
     cardHoverBorder: 'hover:border-indigo-400',
@@ -132,7 +134,7 @@ const BRANCH_PALETTES: BranchPalette[] = [
   },
   {
     name: 'purple',
-    stroke: '#a855f7',
+    stroke: '#8b5cf6',
     cardBg: 'bg-slate-900/95',
     cardBorder: 'border-purple-500/45',
     cardHoverBorder: 'hover:border-purple-400',
@@ -172,7 +174,7 @@ const BRANCH_PALETTES: BranchPalette[] = [
   },
   {
     name: 'cyan',
-    stroke: '#06b6d4',
+    stroke: '#14b8a6',
     cardBg: 'bg-slate-900/95',
     cardBorder: 'border-cyan-500/45',
     cardHoverBorder: 'hover:border-cyan-400',
@@ -255,7 +257,8 @@ export const MindMapPanel: React.FC<MindMapPanelProps> = ({
   isMaximized,
   onToggleMaximize,
   onClose,
-  theme
+  theme,
+  lang = 'zh'
 }) => {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState<boolean>(false);
@@ -867,7 +870,7 @@ export const MindMapPanel: React.FC<MindMapPanelProps> = ({
   return (
     <div className="relative w-full h-full bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden flex flex-col group shadow-lg select-none">
       {/* Top Floating Header Bar (Floating in top-right on hover) */}
-      <div className="absolute top-2 right-2 z-30 flex items-center gap-1.5 pointer-events-auto opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-wrap">
+      <div className="absolute top-2 right-2 z-30 flex items-center justify-end gap-1.5 flex-wrap transition-opacity duration-200 panel-toolbar opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto [@media(hover:none)]:opacity-100 [@media(hover:none)]:pointer-events-auto">
         <div className="flex items-center gap-1.5 flex-wrap">
           {/* Panel Title Badge */}
           <div className="flex items-center gap-2 bg-slate-900/90 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-slate-700/70 shadow-md legacy-title-badge">
@@ -875,7 +878,7 @@ export const MindMapPanel: React.FC<MindMapPanelProps> = ({
               <GripVertical className="w-3.5 h-3.5 text-slate-500 hover:text-slate-300" />
             </span>
             <Network className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="text-xs font-bold tracking-wider text-slate-100">互動心智圖</span>
+            <span className="text-xs font-bold tracking-wider text-slate-100">{t('panel_mindmap', lang)}</span>
           </div>
 
           {/* Expand Level Quick Controls (預設展開前 2~3 層) */}
@@ -1060,7 +1063,7 @@ export const MindMapPanel: React.FC<MindMapPanelProps> = ({
 
       {/* Source Editor Overlay Drawer */}
       {isEditingSource && (
-        <div className="absolute inset-0 z-40 bg-slate-950/95 backdrop-blur-md flex flex-col p-4 pt-16 animate-fade-in">
+        <div className="absolute inset-0 z-40 bg-slate-950/95 backdrop-blur-md flex flex-col p-4 animate-fade-in">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-cyan-400" />
@@ -1108,7 +1111,7 @@ export const MindMapPanel: React.FC<MindMapPanelProps> = ({
         onWheel={handleWheel}
         onMouseDown={handlePointerDown}
         onTouchStart={handleTouchStart}
-        className={`relative flex-1 w-full h-full overflow-hidden touch-none ${
+        className={`relative flex-1 min-h-0 w-full overflow-hidden touch-none ${
           isDragging ? 'cursor-grabbing' : 'cursor-grab'
         }`}
         style={{
@@ -1273,7 +1276,7 @@ export const MindMapPanel: React.FC<MindMapPanelProps> = ({
                       e.stopPropagation();
                       handleFocusNode(node, true);
                     }}
-                    className={`opacity-0 group-hover/node:opacity-100 p-1 rounded-lg ${
+                    className={`opacity-0 group-hover/node:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 p-1 rounded-lg ${
                       isLight
                         ? 'bg-slate-200/80 hover:bg-indigo-600 text-slate-600 hover:text-white'
                         : 'bg-slate-800/90 hover:bg-cyan-600 text-slate-300 hover:text-white'

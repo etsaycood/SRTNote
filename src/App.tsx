@@ -140,7 +140,7 @@ export default function App() {
   // --- Bottom PlayerBar Visibility State ---
   const [showPlayerBar, setShowPlayerBar] = useState<boolean>(() => {
     const saved = localStorage.getItem('srtnote_show_player_bar');
-    return saved !== null ? saved === 'true' : true;
+    return saved !== null ? saved === 'true' : false; // hidden by default to maximise workspace
   });
 
   const handleTogglePlayerBar = () => {
@@ -1108,6 +1108,7 @@ export default function App() {
       case 'video':
         return (
           <VideoPanel
+            lang={lang}
             mediaUrl={mediaUrl}
             mediaType={mediaType}
             isPlaying={isPlaying}
@@ -1137,6 +1138,7 @@ export default function App() {
       case 'slides':
         return (
           <SlidePanel
+            lang={lang}
             slides={slides}
             currentSlideIndex={currentSlideIndex}
             currentTime={currentTime}
@@ -1170,12 +1172,14 @@ export default function App() {
             onOpenPasteModal={() => setIsPasteTranscriptModalOpen(true)}
             currentMediaId={mediaType === 'youtube' && mediaUrl ? extractYouTubeId(mediaUrl) || undefined : undefined}
             theme={theme}
+            lang={lang}
           />
         );
 
       case 'summary':
         return (
           <AISummaryPanel
+            lang={lang}
             summary={aiSummary}
             subtitles={subtitles}
             lmConfig={lmConfig}
@@ -1196,6 +1200,7 @@ export default function App() {
       case 'mindmap':
         return (
           <MindMapPanel
+            lang={lang}
             mindMapContent={mindMapContent}
             projectTitle={projectTitle}
             currentTime={currentTime}

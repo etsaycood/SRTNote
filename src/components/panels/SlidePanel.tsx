@@ -18,6 +18,7 @@ import {
   Link2,
   Unlink
 } from 'lucide-react';
+import { Language, t } from '../../utils/i18n';
 
 interface SlidePanelProps {
   slides: SlideItem[];
@@ -36,6 +37,7 @@ interface SlidePanelProps {
   isSlideSyncEnabled?: boolean;
   onToggleSlideSync?: () => void;
   currentMediaId?: string;
+  lang?: Language;
 }
 
 export const SlidePanel: React.FC<SlidePanelProps> = ({
@@ -54,7 +56,8 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
   onDropFiles,
   isSlideSyncEnabled = true,
   onToggleSlideSync,
-  currentMediaId
+  currentMediaId,
+  lang = 'zh'
 }) => {
   const [isDragOverFile, setIsDragOverFile] = useState(false);
   const currentSlide = slides[currentSlideIndex] || slides[0];
@@ -75,14 +78,14 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
   return (
     <div className="relative w-full h-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col group shadow-lg">
       {/* Top Header Badge & Controls (Floating in top-right on hover) */}
-      <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5 pointer-events-auto opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-wrap">
+      <div className="absolute top-2 right-2 z-20 flex items-center justify-end gap-1.5 flex-wrap transition-opacity duration-200 panel-toolbar opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto [@media(hover:none)]:opacity-100 [@media(hover:none)]:pointer-events-auto">
         <div className="flex items-center gap-2 bg-slate-950/85 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-700/60 shadow-md legacy-title-badge">
           <span title="拖曳以調換位置" className="cursor-grab active:cursor-grabbing flex items-center">
             <GripVertical className="w-3.5 h-3.5 text-slate-500 hover:text-slate-300" />
           </span>
           <Presentation className="w-3.5 h-3.5 text-blue-400" />
           <span className="text-xs font-bold tracking-wider text-slate-200">
-            同步簡報
+            {t('panel_slides', lang)}
           </span>
         </div>
 
@@ -96,19 +99,21 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
           <button
             onClick={onOpenTimelineModal}
             className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-blue-300 hover:text-white hover:bg-blue-600/30 transition-colors"
-            title="調整每頁翻頁時間軸"
+            title={t('timeline', lang)}
           >
             <Edit3 className="w-3.5 h-3.5" />
-            <span>時間軸</span>
+            <span>{t('timeline', lang)}</span>
           </button>
-          <label className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer transition-colors" title="上傳簡報或圖片">
+          <label className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer transition-colors" title={t('uploadSlides', lang)}
+            aria-label={t('uploadSlides', lang)}>
             <Upload className="w-3.5 h-3.5" />
             <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={onUploadSlides} className="hidden" />
           </label>
           <button
             onClick={onToggleMaximize}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors legacy-window-ctrl"
-            title={isMaximized ? '還原視窗' : '最大化視窗'}
+            title={isMaximized ? t('restoreWindow', lang) : t('maximizeWindow', lang)}
+            aria-label={isMaximized ? t('restoreWindow', lang) : t('maximizeWindow', lang)}
           >
             {isMaximized ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
           </button>
@@ -116,7 +121,8 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 transition-colors legacy-window-ctrl"
-              title="關閉此面板（可由右上角加回）"
+              title={t('closePanel', lang)}
+              aria-label={t('closePanel', lang)}
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -148,7 +154,7 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
             onDropFiles?.(e.dataTransfer.files);
           }
         }}
-        className="relative flex-1 w-full h-full flex items-center justify-center bg-slate-950 p-4 overflow-hidden select-none"
+        className="relative flex-1 min-h-0 w-full flex items-center justify-center bg-slate-950 p-4 overflow-hidden select-none"
       >
         {/* Drag-over overlay */}
         {isDragOverFile && (
@@ -190,7 +196,7 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({
                 </div>
                 <div className="flex justify-between items-center text-xs text-slate-500 border-t border-slate-800 pt-3">
                   <span>設定觸發時間：{formatTime(currentSlide.timestamp)}</span>
-                  <span>SyncNote Studio</span>
+                  <span>SRTNote Studio</span>
                 </div>
               </div>
             )}
