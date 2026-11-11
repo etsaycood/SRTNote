@@ -1,5 +1,5 @@
-import * as pdfjsLib from 'pdfjs-dist';
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.js?url';
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+import pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
 import { SlideItem } from '../types';
 
 // Set up PDF.js worker
@@ -20,7 +20,7 @@ export async function convertPdfToSlides(
 ): Promise<SlideItem[]> {
   try {
     const arrayBuffer = file instanceof File ? await file.arrayBuffer() : file;
-    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer, isEvalSupported: false });
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
     const pdfDoc = await loadingTask.promise;
     const numPages = pdfDoc.numPages;
 
@@ -39,19 +39,13 @@ export async function convertPdfToSlides(
       const viewport = page.getViewport({ scale: targetScale });
 
       const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-
-      if (!ctx) {
-        throw new Error('無法取得 Canvas 繪製上下文');
-      }
-
       canvas.width = viewport.width;
       canvas.height = viewport.height;
 
       // Render page content
       await page.render({
-        canvasContext: ctx,
-        viewport: viewport
+        canvas,
+        viewport
       }).promise;
 
       // Convert to efficient Blob URL instead of giant Base64 Data URL to save memory & JSON size
