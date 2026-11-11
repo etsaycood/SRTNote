@@ -10,7 +10,7 @@
 ![KaTeX](https://img.shields.io/badge/KaTeX-LaTeX%20Math-00599C)
 ![Cloud Share](https://img.shields.io/badge/Cloud%20Share-Pastes.dev%20%7C%20dpaste-success)
 ![LM Studio](https://img.shields.io/badge/LM%20Studio-Local%20AI-blueviolet)
-![License](https://img.shields.io/badge/License-MIT-green)
+![License](https://img.shields.io/badge/License-AGPL--3.0-blue)
 [![Deploy to GitHub Pages](https://github.com/etsaycood/SRTNote/actions/workflows/deploy.yml/badge.svg)](https://github.com/etsaycood/SRTNote/actions/workflows/deploy.yml)
 
 **集合視訊、簡報、逐字稿與 AI 筆記邊界的沉浸式學習工作台**  
@@ -176,4 +176,4 @@ npm run build
 
 ## 📄 開源授權
 
-本專案基於 [MIT License](LICENSE) 條款開源發布。
+本專案基於 [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE) 條款開源發布。
